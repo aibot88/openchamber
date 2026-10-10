@@ -286,10 +286,13 @@ const TurnBlock = React.memo(({
 }: TurnBlockProps) => {
 
     const showReasoningTraces = useUIStore((state) => state.showReasoningTraces);
-    // A hidden prompt has nothing to pin, and a background report or a
-    // compaction opens its turn as a notice row, which never sticks.
+    // A hidden prompt or a skipped notice that split a turn has nothing to
+    // pin, and a background report or a compaction opens its turn as a
+    // notice row, which never sticks.
     const turnHeaderCanStick = React.useMemo(
-        () => !isHiddenUserMessage(turn.userMessage) && !isTurnOpeningNotice(turn.userMessage.info),
+        () => !isHiddenUserMessage(turn.userMessage)
+            && !isTurnOpeningNotice(turn.userMessage.info)
+            && !isSkippedTimelineMessage(turn.userMessage.info),
         [turn.userMessage]
     );
     const turnUiState = turnUiStates.get(turn.turnId) ?? { isExpanded: defaultActivityExpanded };
