@@ -136,6 +136,17 @@ Go deeper with the OpenChamber guides:
 
 For self-hosting details, see the [reverse proxy guide](docs/REVERSE_PROXY.md). For custom theme authoring, see the [custom themes guide](docs/CUSTOM_THEMES.md).
 
+## Gemini subscription provider in this fork
+
+This fork includes an experimental OpenCode 2 provider in
+[`.opencode/plugins/google-ai-pro`](.opencode/plugins/google-ai-pro/README.md).
+It connects Google AI Pro through Antigravity OAuth and keeps model switches in
+the existing session. OpenChamber's application packages are unchanged.
+
+Google prohibits third-party subscription access and may suspend accounts using
+it. Local fixture tests pass; successful Google inference is still unverified.
+Read the plugin's installation and risk notes before connecting an account.
+
 ## Why OpenCode?
 
 OpenChamber uses [OpenCode](https://opencode.ai) to run coding agents. We chose it because it is open source, has a solid API, and is easy to extend.

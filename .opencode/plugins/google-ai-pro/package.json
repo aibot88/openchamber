@@ -1,0 +1,23 @@
+{
+  "name": "opencode-antigravity-subscription-v2",
+  "version": "0.2.1",
+  "private": true,
+  "type": "module",
+  "main": "./index.ts",
+  "scripts": {
+    "test": "bun test",
+    "type-check": "tsc --noEmit",
+    "probe:runtime": "bun run probe-runtime.ts",
+    "probe:continuation": "bun run probe-continuation.ts"
+  },
+  "dependencies": {
+    "@opencode/plugin": "2.0.25",
+    "https-proxy-agent": "7.0.6",
+    "opencode-antigravity-auth-updated": "1.7.0",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.10",
+    "typescript": "5.9.3"
+  }
+}
