@@ -2491,8 +2491,6 @@ export const dict = {
   'chat.messageBody.actions.pinContext': 'Pin into context (survives compaction)',
   'chat.messageBody.actions.unpinContext': 'Unpin from context (will not survive compaction)',
   'chat.messageBody.actions.contextPinFailed': 'Could not update the context pin',
-  'chat.messageBody.actions.openPreviewAria': 'Open preview',
-  'chat.messageBody.actions.openPreview': 'Open preview',
   'chat.messageBody.actions.copyAnswer': 'Copy answer',
   'chat.messageBody.actions.moreActions': 'More actions',
   'chat.messageBody.toast.copied': 'Copied to clipboard',
