@@ -878,7 +878,7 @@ export const dict: Record<I18nKey, string> = {
   "sessions.sidebar.group.worktreeRemoving": "Excluindo o worktree…",
   "sessions.sidebar.project.folderMissing": "A pasta do projeto não existe ou está indisponível",
   "sessions.sidebar.group.space": "Espaço isolado",
-  "sessions.sidebar.group.spaceStale": "O espaço não está respondendo. As sessões podem estar desatualizadas.",
+  "sessions.sidebar.group.spaceStale": "Nem todas as sessões deste espaço são exibidas.",
   "sessions.sidebar.grouping.spaceUnnamed": "Espaço isolado",
   "sessions.sidebar.sessionDialogs.worktree.label": "Worktree",
   "sessions.sidebar.sessionDialogs.worktree.pathUnavailable": "Caminho de worktree não disponível.",

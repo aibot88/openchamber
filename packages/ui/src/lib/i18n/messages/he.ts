@@ -852,7 +852,7 @@ export const dict = {
   'sessions.sidebar.group.worktreeRemoving': 'מסיר את עץ העבודה…',
   'sessions.sidebar.project.folderMissing': 'תיקיית הפרויקט חסרה או לא זמינה',
   'sessions.sidebar.group.space': 'מרחב מבודד',
-  'sessions.sidebar.group.spaceStale': 'המרחב לא מגיב. ייתכן שההפעלות אינן מעודכנות.',
+  'sessions.sidebar.group.spaceStale': 'לא כל ההפעלות של המרחב הזה מוצגות.',
   'sessions.sidebar.grouping.spaceUnnamed': 'מרחב מבודד',
   'sessions.sidebar.sessionDialogs.worktree.label': 'עץ עבודה',
   'sessions.sidebar.sessionDialogs.worktree.pathUnavailable': 'נתיב עץ העבודה לא זמין.',

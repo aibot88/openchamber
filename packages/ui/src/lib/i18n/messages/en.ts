@@ -876,7 +876,7 @@ export const dict = {
   'sessions.sidebar.group.worktreeRemoving': 'Removing worktree…',
   'sessions.sidebar.project.folderMissing': 'Project folder is missing or unavailable',
   'sessions.sidebar.group.space': 'Isolated space',
-  'sessions.sidebar.group.spaceStale': 'The space is not answering. Sessions may be stale.',
+  'sessions.sidebar.group.spaceStale': 'Not all sessions of this space are shown.',
   'sessions.sidebar.grouping.spaceUnnamed': 'Isolated space',
   'sessions.sidebar.sessionDialogs.worktree.label': 'Worktree',
   'sessions.sidebar.sessionDialogs.worktree.pathUnavailable': 'Worktree path unavailable.',

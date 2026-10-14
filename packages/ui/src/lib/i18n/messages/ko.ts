@@ -877,7 +877,7 @@ export const dict: Record<I18nKey, string> = {
   'sessions.sidebar.group.worktreeRemoving': '워크트리 제거 중…',
   'sessions.sidebar.project.folderMissing': '프로젝트 폴더가 없거나 사용할 수 없습니다',
   'sessions.sidebar.group.space': '격리 공간',
-  'sessions.sidebar.group.spaceStale': '공간이 응답하지 않습니다. 세션이 오래된 것일 수 있습니다.',
+  'sessions.sidebar.group.spaceStale': '이 공간의 세션이 모두 표시되지는 않습니다.',
   'sessions.sidebar.grouping.spaceUnnamed': '격리 공간',
   'sessions.sidebar.sessionDialogs.worktree.label': '워크트리',
   'sessions.sidebar.sessionDialogs.worktree.pathUnavailable': '워크트리 경로를 사용할 수 없습니다.',

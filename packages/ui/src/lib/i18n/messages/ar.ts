@@ -852,7 +852,7 @@ export const dict = {
   'sessions.sidebar.group.worktreeRemoving': 'جارٍ إزالة شجرة العمل…',
   'sessions.sidebar.project.folderMissing': 'مجلد المشروع مفقود أو غير متاح',
   'sessions.sidebar.group.space': 'مساحة معزولة',
-  'sessions.sidebar.group.spaceStale': 'المساحة لا تستجيب. قد تكون الجلسات قديمة.',
+  'sessions.sidebar.group.spaceStale': 'لا تُعرض كل جلسات هذه المساحة.',
   'sessions.sidebar.grouping.spaceUnnamed': 'مساحة معزولة',
   'sessions.sidebar.sessionDialogs.worktree.label': 'شجرة العمل',
   'sessions.sidebar.sessionDialogs.worktree.pathUnavailable': 'مسار شجرة العمل غير متاح.',

@@ -213,6 +213,38 @@ describe('buildSessionSidebarRowModel', () => {
     }
   });
 
+  test('timeline shows a space without chats as its group header until its first chat', () => {
+    const space = { id: 'space1', name: 'fresh', state: 'complete' as const, projectDirectory: '/repo', directory: '/spaces/space1/repo' };
+    const empty = group([], { id: 'space-empty', label: 'fresh', isMain: false, directory: '/spaces/space1/repo', space });
+    const used = group([node('in-space')], { id: 'space-used', label: 'used', isMain: false, directory: '/spaces/space2/repo', space: { ...space, id: 'space2', name: 'used' } });
+    const input = args([project([group([]), empty, used])]);
+    input.viewMode = 'timeline';
+    input.timelineItems = [timelineItem('in-space')];
+
+    const rows = buildSessionSidebarRowModel(input).rows;
+    expect(rows.map((row) => row.kind === 'group-header' ? `group:${row.group.id}:${row.empty}` : row.kind === 'session' ? `session:${row.node.session.id}` : row.kind))
+      .toEqual(['project-header', 'group:space-empty:true', 'session:in-space']);
+
+    input.mode = 'search';
+    input.normalizedQuery = 'in-space';
+    expect(buildSessionSidebarRowModel(input).rows.some((row) => row.kind === 'group-header')).toBe(false);
+  });
+
+  test('timeline waits for a space\'s chats to load and shows a failed load as in the Tree', () => {
+    const space = { id: 'space1', name: 'fresh', state: 'complete' as const, projectDirectory: '/repo', directory: '/spaces/space1/repo' };
+    const empty = group([], { id: 'space-empty', label: 'fresh', isMain: false, directory: '/spaces/space1/repo', space });
+    const input = args([project([group([]), empty])]);
+    input.viewMode = 'timeline';
+    const statusOf = (state: 'loading' | 'load-failed') => new Map([['project-a:space-empty', { state, directory: '/spaces/space1/repo', canGrantAccess: false }]]);
+
+    input.groupStatusByKey = statusOf('loading');
+    expect(buildSessionSidebarRowModel(input).rows.map((row) => row.kind)).toEqual(['project-header']);
+
+    input.groupStatusByKey = statusOf('load-failed');
+    expect(buildSessionSidebarRowModel(input).rows.map((row) => row.kind === 'group-header' ? `group-header:${row.empty}` : row.kind))
+      .toEqual(['project-header', 'group-header:false', 'status']);
+  });
+
   test('a collapsed timeline project shows only its header', () => {
     const input = args([project([group([])])]);
     input.viewMode = 'timeline';

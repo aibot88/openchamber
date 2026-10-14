@@ -45,6 +45,19 @@ describe('spaceModelRefusal', () => {
     expect(spaceModelRefusal({ requestId: null, directory: '/home/me/app' }, 'openai')).toBeNull();
   });
 
+  test('a provider of the user\'s own counts once the host lists it for the space\'s project, and not before', () => {
+    listed(running());
+    // The host has not been asked about this project yet: nothing is refused on a guess.
+    expect(spaceModelRefusal(session, 'ollama-local')).toBeNull();
+    useSpacesStore.getState().noteCustomProviders('/home/me/app', [{ id: 'ollama-local', name: 'Ollama (local)', package: 'aisdk:@ai-sdk/openai-compatible', baseURL: 'http://localhost:11434/v1', loopback: true, models: ['qwen3:8b'], hasKey: false, supported: true }]);
+    expect(spaceModelRefusal(session, 'ollama-local')).toEqual({ spaceId: ID, providerId: 'ollama-local', reason: 'not_granted' });
+    const custom = { kind: 'custom' as const, id: 'ollama-local', provider: 'ollama-local', url: 'http://gatekeeper:8080/model/ollama-local' };
+    listed(running({ grants: [anthropic, custom] }));
+    expect(spaceModelRefusal(session, 'ollama-local')).toBeNull();
+    listed(running({ grants: [anthropic, custom], access: 'needs_access', needsAccess: ['ollama-local'] }));
+    expect(spaceModelRefusal(session, 'ollama-local')).toEqual({ spaceId: ID, providerId: 'ollama-local', reason: 'needs_again' });
+  });
+
   test('a key the gatekeeper lost after a restart needs the user again', () => {
     listed(running({ access: 'needs_access', needsAccess: ['anthropic'] }));
     expect(spaceModelRefusal(session, 'anthropic')).toEqual({ spaceId: ID, providerId: 'anthropic', reason: 'needs_again' });

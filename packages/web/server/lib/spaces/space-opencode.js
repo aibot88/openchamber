@@ -35,8 +35,9 @@ const WRITE_CONFIG_SCRIPT = [
  * composer offers the host's catalog, and the same provider id inside is what makes that choice
  * work in the space unchanged. Decided with the maintainer on 2026-09-26.
  */
-export function buildProviderConfig(grants) {
+export function buildProviderConfig(grants, customProviders = new Map()) {
   const provider = {};
+  const providers = {};
   for (const grant of grants) {
     if (grant.kind === 'model') provider[grant.provider] = { options: { baseURL: spaceWindowUrl(grant.id), apiKey: WINDOW_PLACEHOLDER_KEY } };
     // A login takes its token from the row below, so no placeholder key. Copilot's plugin reads
@@ -45,8 +46,19 @@ export function buildProviderConfig(grants) {
       const options = loginMethodOf(grant.provider, grant.method)?.options(spaceWindowUrl(grant.id));
       if (options) provider[grant.provider] = { options };
     }
+    // A custom provider is unknown to the catalog inside, so its entry carries what the host's
+    // does: the SDK, the name and the models, in OpenCode 2's own spelling, which is what the
+    // host's Settings write. The catalog providers above keep the spelling measured on 2.0.25;
+    // OpenCode reads both in one file. A definition the host could not read now is left out,
+    // and the start that finds it again writes it.
+    if (grant.kind === 'custom') {
+      const definition = customProviders.get(grant.provider);
+      if (definition) providers[grant.provider] = { name: definition.name, package: definition.package, settings: { baseURL: spaceWindowUrl(grant.id), apiKey: WINDOW_PLACEHOLDER_KEY }, models: definition.models };
+    }
   }
-  return { $schema: 'https://opencode.ai/config.json', provider };
+  const config = { $schema: 'https://opencode.ai/config.json', provider };
+  if (Object.keys(providers).length > 0) config.providers = providers;
+  return config;
 }
 
 const CODEX_API = 'https://chatgpt.com/backend-api/codex';
@@ -260,9 +272,12 @@ export function archivedChatOf({ info, messages }, { directory, archivedAt, keep
  * `chatMaxBytes` and `chatTimeoutMs` the caps on one chat, smaller in the tests.
  */
 export function createSpaceOpenCode({ exec, requestInside, chatMaxBytes = CHAT_EXPORT_MAX_BYTES, chatTimeoutMs = CHAT_EXPORT_TIMEOUT_MS }) {
-  /** Writes the whole global configuration from the model grants the record holds. */
-  const writeProviderConfig = async (spaceId, grants) => {
-    const text = `${JSON.stringify(buildProviderConfig(grants), null, 2)}\n`;
+  /**
+   * Writes the whole global configuration from the model grants the record holds;
+   * `customProviders` holds the host's definition of each custom provider among them, by id.
+   */
+  const writeProviderConfig = async (spaceId, grants, customProviders = new Map()) => {
+    const text = `${JSON.stringify(buildProviderConfig(grants, customProviders), null, 2)}\n`;
     const result = await exec(spaceId, [IMAGE_SH, '-c', WRITE_CONFIG_SCRIPT], { stdin: text });
     if (result.code !== 0) {
       throw new SpaceError('space_setup_failed', `Could not write the provider configuration inside the space: ${tail(result.stderr) || `exit code ${result.code}`}`);
