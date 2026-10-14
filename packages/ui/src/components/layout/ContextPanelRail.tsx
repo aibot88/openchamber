@@ -35,7 +35,6 @@ import {
   isShortcutPrefixHeld,
 } from '@/lib/shortcuts';
 import { cn } from '@/lib/utils';
-import { useFeatureFlagsStore } from '@/stores/useFeatureFlagsStore';
 import { useGitStatus } from '@/stores/useGitStore';
 import { useSourceControlAuthEntry, useSourceControlAuthStore } from '@/stores/useSourceControlAuthStore';
 import { GITHUB_SOURCE_CONTROL_IDENTITY } from '@/lib/source-control/identity';
@@ -46,6 +45,7 @@ import { useGuestBadgeStore } from '@/lib/guests/badge-store';
 import { isPluginContextPanelMode, pluginIdFromMode } from '@/lib/surfaces/modes';
 import { shownContextModes, zoneOfMode } from '@/lib/workspace/zones';
 import { ContextRailSurfacesDialog } from './ContextRailSurfacesDialog';
+import { ContextRailTooltipDetails, ContextUsageRingIcon } from './ContextRailUsage';
 import { ZoneMoveMenuItems } from './ZoneMoveMenuItems';
 import { startZoneDragGesture, type ZoneDragGesture } from './zoneDrag';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
@@ -125,6 +125,8 @@ const ContextPanelRailItem: React.FC<RailItemProps> = ({
           >
             {surface.id === 'diff' ? (
               <DiffViewIcon className="h-[18px] w-[18px]" />
+            ) : surface.id === 'context' ? (
+              <ContextUsageRingIcon className="h-[18px] w-[18px]" />
             ) : (
               <GuestIcon
                 icon={surface.icon}
@@ -135,7 +137,7 @@ const ContextPanelRailItem: React.FC<RailItemProps> = ({
             {showOrderNumber && orderNumber != null ? (
               <span
                 aria-hidden="true"
-                className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-surface-muted px-1 text-[0.625rem] font-medium leading-none text-muted-foreground"
+                className="absolute inset-e-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-surface-muted px-1 text-[0.625rem] font-medium leading-none text-muted-foreground"
               >
                 {orderNumber === 10 ? '0' : orderNumber}
               </span>
@@ -145,7 +147,7 @@ const ContextPanelRailItem: React.FC<RailItemProps> = ({
                 // Muted digits on the muted surface sat at almost the same
                 // luminance as the glyph they overlap. The count is a live
                 // signal, so it takes the info tone on its own opaque chip.
-                className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.625rem] font-semibold leading-none"
+                className="absolute -inset-e-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.625rem] font-semibold leading-none"
                 style={{
                   backgroundColor: 'var(--status-info-background)',
                   color: 'var(--status-info)',
@@ -156,7 +158,7 @@ const ContextPanelRailItem: React.FC<RailItemProps> = ({
             ) : showActivityDot ? (
               <span
                 aria-hidden="true"
-                className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-[var(--status-info)]"
+                className="absolute inset-e-1 top-1 h-1.5 w-1.5 rounded-full bg-[var(--status-info)]"
               />
             ) : null}
           </button>
@@ -168,6 +170,7 @@ const ContextPanelRailItem: React.FC<RailItemProps> = ({
             {badgeDescription ? (
               <span className="typography-micro text-muted-foreground">{badgeDescription}</span>
             ) : null}
+            {surface.id === 'context' ? <ContextRailTooltipDetails /> : null}
           </div>
         </TooltipContent>
       </Tooltip>
@@ -194,7 +197,6 @@ export const ContextPanelRail: React.FC = () => {
   const closeContextZone = useUIStore((state) => state.closeContextZone);
   const contextSurfaceZones = useUIStore((state) => state.contextSurfaceZones);
   const shortcutOverrides = useUIStore((state) => state.shortcutOverrides);
-  const planModeEnabled = useFeatureFlagsStore((state) => state.planModeEnabled);
   const githubAuthChecked = (useSourceControlAuthEntry(GITHUB_SOURCE_CONTROL_IDENTITY)?.hasChecked ?? false);
   // Change requests come from GitHub or GitLab, whichever the project lives on,
   // so the surface is there when either kind of account is connected.
@@ -299,14 +301,13 @@ export const ContextPanelRail: React.FC = () => {
     return getVisibleContextRailSurfaces({
       railOrder: contextRailOrder,
       hiddenSurfaces: contextRailHiddenSurfaces,
-      planModeEnabled,
       isVSCode: isVSCodeRuntime(),
       screenWidth,
       tabs,
       sourceControlConnected,
       extras: guestSurfaces,
     }).map((surface) => (surface.id === 'pr' && repositoryProvider === 'gitlab' ? { ...surface, icon: 'gitlab' as const } : surface));
-  }, [contextRailHiddenSurfaces, contextRailOrder, guestSurfaces, planModeEnabled, repositoryProvider, screenWidth, sourceControlConnected, tabs]);
+  }, [contextRailHiddenSurfaces, contextRailOrder, guestSurfaces, repositoryProvider, screenWidth, sourceControlConnected, tabs]);
 
   // A surface whose integration disconnected closes rather than lingering as
   // an active panel with no rail icon.

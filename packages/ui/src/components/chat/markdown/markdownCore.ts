@@ -1,4 +1,4 @@
-import { Marked, marked, type MarkedExtension, type Tokens, type TokenizerAndRendererExtension } from 'marked';
+import { Marked, type MarkedExtension, type Tokens, type TokenizerAndRendererExtension } from 'marked';
 import markedLinkifyIt from 'marked-linkify-it';
 import remend from 'remend';
 import katex from 'katex';
@@ -36,14 +36,10 @@ const LOCAL_IMAGE_EXTENSION_RE = /\.(?:png|jpe?g|gif|webp)(?:[?#].*)?$/i;
 const WINDOWS_ABSOLUTE_PATH_RE = /^[A-Za-z]:[\\/]/;
 const URL_SCHEME_RE = /^[A-Za-z][A-Za-z\d+.-]*:/;
 
-export interface MarkdownImageCandidate {
-  source: string;
-  filename: string;
-}
-
 /**
  * `inline` draws every image. `label` draws none: the image becomes its file
- * name (assistant text, whose images the gallery shows). `local` draws images
+ * name (assistant text, whose settled local images are then drawn in place,
+ * see inlineMarkdownImages.ts). `local` draws images
  * from this machine and `data:` images, and turns a remote one into a link.
  * A remote image loads by itself the moment it renders, so in output the
  * model or a tool wrote (tool results, reasoning) it could report what the
@@ -51,7 +47,7 @@ export interface MarkdownImageCandidate {
  */
 export type MarkdownImageMode = 'inline' | 'label' | 'local';
 
-export const isRemoteMarkdownImageSource = (source: string): boolean => /^(?:https?:)?\/\//i.test(source);
+const isRemoteMarkdownImageSource = (source: string): boolean => /^(?:https?:)?\/\//i.test(source);
 
 /**
  * `escape` keeps raw HTML visible as text (assistant output and every other
@@ -59,21 +55,6 @@ export const isRemoteMarkdownImageSource = (source: string): boolean => /^(?:htt
  * is for documents a user opens to read, such as a README in the Files preview.
  */
 export type MarkdownRawHtmlMode = 'escape' | 'sanitize';
-
-export const MAX_MARKDOWN_IMAGE_COUNT = 12;
-
-const MARKDOWN_IMAGE_CANDIDATE_CACHE_MAX_ENTRIES = 1024;
-const MARKDOWN_IMAGE_CANDIDATE_CACHE_MAX_BYTES = 2 * 1024 * 1024;
-const MARKDOWN_IMAGE_CANDIDATE_CACHE_MAX_ENTRY_BYTES = 64 * 1024;
-
-type MarkdownImageCandidateCacheEntry = {
-  candidates: MarkdownImageCandidate[];
-  bytes: number;
-};
-
-const markdownImageCandidateCache = new Map<string, MarkdownImageCandidateCacheEntry>();
-let markdownImageCandidateCacheBytes = 0;
-let markdownImageCandidateScanCount = 0;
 
 const isLocalMarkdownImageSource = (source: string): boolean => {
   if (/^\/\//.test(source) || !LOCAL_IMAGE_EXTENSION_RE.test(source)) return false;
@@ -104,80 +85,6 @@ const getMarkdownImageFilename = (source: string, fallback: string): string => {
   }
 };
 
-const estimateMarkdownImageCandidateCacheEntryBytes = (
-  markdown: string,
-  candidates: readonly MarkdownImageCandidate[],
-): number => (
-  (markdown.length + candidates.reduce((total, candidate) => total + candidate.source.length + candidate.filename.length, 0)) * 2
-);
-
-const scanMarkdownImageCandidates = (markdown: string): MarkdownImageCandidate[] => {
-  markdownImageCandidateScanCount += 1;
-  const candidates: MarkdownImageCandidate[] = [];
-  const seen = new Set<string>();
-  const tokens = marked.lexer(markdown);
-  marked.walkTokens(tokens, (token) => {
-    if (token.type !== 'image') return;
-
-    const source = token.href ?? '';
-    if (!source || !isSupportedMarkdownImageSource(source) || seen.has(source)) return;
-    const fallback = typeof token.text === 'string' ? token.text : '';
-    const filename = getMarkdownImageFilename(source, fallback);
-    if (!filename) return;
-
-    seen.add(source);
-    candidates.push({ source, filename });
-  });
-  return candidates;
-};
-
-const getMarkdownImageCandidates = (markdown: string): MarkdownImageCandidate[] => {
-  const cached = markdownImageCandidateCache.get(markdown);
-  if (cached) {
-    markdownImageCandidateCache.delete(markdown);
-    markdownImageCandidateCache.set(markdown, cached);
-    return cached.candidates;
-  }
-
-  let candidates: MarkdownImageCandidate[];
-  try {
-    candidates = scanMarkdownImageCandidates(markdown);
-  } catch {
-    // Image discovery is optional; a malformed message must not hide the chat
-    // or prevent discovery in the other messages.
-    return [];
-  }
-  const bytes = estimateMarkdownImageCandidateCacheEntryBytes(markdown, candidates);
-  if (bytes > MARKDOWN_IMAGE_CANDIDATE_CACHE_MAX_ENTRY_BYTES) return candidates;
-
-  while (
-    markdownImageCandidateCache.size >= MARKDOWN_IMAGE_CANDIDATE_CACHE_MAX_ENTRIES
-    || markdownImageCandidateCacheBytes + bytes > MARKDOWN_IMAGE_CANDIDATE_CACHE_MAX_BYTES
-  ) {
-    const oldest = markdownImageCandidateCache.entries().next().value;
-    if (!oldest) break;
-    markdownImageCandidateCache.delete(oldest[0]);
-    markdownImageCandidateCacheBytes -= oldest[1].bytes;
-  }
-  markdownImageCandidateCache.set(markdown, { candidates, bytes });
-  markdownImageCandidateCacheBytes += bytes;
-  return candidates;
-};
-
-/** @internal Test-only cache instrumentation for deterministic regression tests. */
-export const __markdownImageCandidateCacheForTests = {
-  reset: (): void => {
-    markdownImageCandidateCache.clear();
-    markdownImageCandidateCacheBytes = 0;
-    markdownImageCandidateScanCount = 0;
-  },
-  stats: () => ({
-    entries: markdownImageCandidateCache.size,
-    bytes: markdownImageCandidateCacheBytes,
-    scans: markdownImageCandidateScanCount,
-  }),
-};
-
 /** Links being rendered right now; parsing is synchronous, so a counter is exact. */
 let markdownLinkDepth = 0;
 
@@ -192,33 +99,17 @@ const renderMarkdownImageLabel = ({
 }): string => {
   const label = getMarkdownImageFilename(href ?? '', text);
   const titleAttr = title ? ` title="${escapeAttr(title)}"` : '';
-  const span = `<span${titleAttr} class="inline-flex items-center gap-1 align-text-bottom text-muted-foreground" data-openchamber-markdown-image-label="true">${escapeAttr(label)}</span>`;
+  const remote = isRemoteMarkdownImageSource(href ?? '');
+  // A local or embedded image outside a link keeps its source, so the chat
+  // can draw it in place once the message settles (inlineMarkdownImages.ts).
+  const sourceAttr = !remote && markdownLinkDepth === 0 && isSupportedMarkdownImageSource(href ?? '')
+    ? ` data-openchamber-markdown-image-source="${escapeAttr(href)}"`
+    : '';
+  const span = `<span${titleAttr} class="inline-flex items-center gap-1 align-text-bottom text-muted-foreground" data-openchamber-markdown-image-label="true"${sourceAttr}>${escapeAttr(label)}</span>`;
   // A remote image becomes a link to itself, unless it already sits inside
   // one (a badge): a link cannot hold another.
-  if (!isRemoteMarkdownImageSource(href ?? '') || markdownLinkDepth > 0) return span;
+  if (!remote || markdownLinkDepth > 0) return span;
   return `<a href="${escapeAttr(href)}" class="external-link" target="_blank" rel="noopener noreferrer">${span}</a>`;
-};
-
-export const extractMarkdownImageCandidates = (
-  markdownTexts: readonly string[],
-  limit = MAX_MARKDOWN_IMAGE_COUNT,
-): MarkdownImageCandidate[] => {
-  if (limit <= 0) return [];
-
-  const candidates: MarkdownImageCandidate[] = [];
-  const seen = new Set<string>();
-
-  for (const markdown of markdownTexts) {
-    if (!markdown || candidates.length >= limit) continue;
-    for (const candidate of getMarkdownImageCandidates(markdown)) {
-      if (candidates.length >= limit) break;
-      if (seen.has(candidate.source)) continue;
-      seen.add(candidate.source);
-      candidates.push({ ...candidate });
-    }
-  }
-
-  return candidates;
 };
 
 // ---------------------------------------------------------------------------
@@ -240,10 +131,6 @@ type MarkdownBlock = {
   plainText?: true;
   // A trailing fence whose closing marker has not arrived yet.
   openFence?: true;
-  // The last block of a message that is still streaming but rendered as if
-  // settled (the sorted chat mode). It changes with every step, so it is
-  // cached with the live blocks instead of pushing settled blocks out.
-  growing?: true;
   // The piece of the split this block renders; carries its content hash.
   segment?: Segment;
 };
@@ -516,9 +403,8 @@ export const __liveSplitStatsForTests = () => ({ ...liveSplitStats, settled: set
 export const __streamBlocksForTests = (
   text: string,
   live: boolean,
-  growing = live,
 ): Array<Pick<MarkdownBlock, 'raw' | 'src' | 'mode' | 'highlight'>> =>
-  streamBlocks(text, live, 'escape', growing).map(({ raw, src, mode, highlight }) => ({ raw, src, mode, highlight }));
+  streamBlocks(text, live, 'escape').map(({ raw, src, mode, highlight }) => ({ raw, src, mode, highlight }));
 
 /**
  * Split markdown into render blocks, one per top-level token. While
@@ -527,26 +413,20 @@ export const __streamBlocksForTests = (
  * partial fence does not corrupt the parse of stable content above it. A
  * settled message renders every block from its own text, so blocks that were
  * complete while streaming keep their identity when the stream ends.
- *
- * `growing` marks text that is still streaming but rendered as if settled
- * (the sorted chat mode): it is split incrementally like a live stream and
- * stays out of the settled split memo, whose entries every step would evict.
  */
 const streamBlocks = (
   text: string,
   live: boolean,
   rawHtml: MarkdownRawHtmlMode = 'escape',
-  growing = live,
 ): MarkdownBlock[] => {
   // Raw HTML of a document may open in one block and close in another; the
   // allowlist pass must see it whole.
   if (!live && rawHtml === 'sanitize') return [{ raw: text, src: text, mode: 'full', highlight: true }];
 
-  const split = live || growing ? splitText(text, true) : settledSplit(text);
-  const growingTail = !live && growing ? { growing: true as const } : {};
+  const split = live ? splitText(text, true) : settledSplit(text);
   if (split.kind === 'whole') {
-    if (split.plainText) return [{ raw: text, src: text, mode: live ? 'live' : 'full', highlight: true, plainText: true, ...growingTail }];
-    return [{ raw: text, src: live ? heal(text) : text, mode: live ? 'live' : 'full', highlight: true, ...growingTail }];
+    if (split.plainText) return [{ raw: text, src: text, mode: live ? 'live' : 'full', highlight: true, plainText: true }];
+    return [{ raw: text, src: live ? heal(text) : text, mode: live ? 'live' : 'full', highlight: true }];
   }
 
   const lastIndex = split.segments.length - 1;
@@ -554,12 +434,7 @@ const streamBlocks = (
     const raw = text.slice(segment.start, segment.end);
     const isLast = index === lastIndex;
     const openFence = isLast && segment.fence !== undefined;
-    if (!live) {
-      const block: MarkdownBlock = { raw, src: raw, mode: 'full', highlight: true, segment };
-      if (isLast && growing) block.growing = true;
-      if (isLast && growing && openFence) block.openFence = true;
-      return block;
-    }
+    if (!live) return { raw, src: raw, mode: 'full', highlight: true, segment };
     const block: MarkdownBlock = {
       raw,
       // A finished block renders from its own text, as it will once the
@@ -793,6 +668,14 @@ const OPENCHAMBER_SESSION_LINK_SCHEMA = {
   validate: (text: string, pos: number): number => OPENCHAMBER_SESSION_LINK_TAIL.exec(text.slice(pos))?.[0].length ?? 0,
 };
 
+// Streamed prose with many bold or emphasis tokens made linkify search the rest
+// of the paragraph at each token on every update (openchamber/openchamber#4648).
+// With fuzzyLink off, linkify only finds links that hold `:`, `/` or `@`: every
+// scheme, `openchamber:` included, ends in `:`, a protocol-relative link starts
+// with `//`, and an email needs `@`. Text without any of them skips the search.
+// Recheck these characters when the options or schemas below change.
+const LINK_MARKER = /[:/@]/;
+
 const boundedLinkify = (): MarkedExtension => ({
   extensions: (markedLinkifyIt({ fuzzyLink: false, schemas: { 'openchamber:': OPENCHAMBER_SESSION_LINK_SCHEMA } }).extensions ?? []).map((extension) => {
     if (!('tokenizer' in extension)) return extension;
@@ -800,12 +683,12 @@ const boundedLinkify = (): MarkedExtension => ({
     return {
       ...extension,
       start(src) {
-        if (src.length > LINKIFY_SOURCE_LIMIT) return undefined;
+        if (src.length > LINKIFY_SOURCE_LIMIT || !LINK_MARKER.test(src)) return undefined;
         scanStats.linkify += src.length;
         return start?.call(this, src);
       },
       tokenizer(src, tokens) {
-        if (src.length > LINKIFY_SOURCE_LIMIT) return undefined;
+        if (src.length > LINKIFY_SOURCE_LIMIT || !LINK_MARKER.test(src)) return undefined;
         scanStats.linkify += src.length;
         return tokenizer.call(this, src, tokens);
       },
@@ -1160,7 +1043,7 @@ const liveBlockCache = new HighlightResultCache<string>({
 });
 
 const cacheFor = (block: MarkdownBlock): HighlightResultCache<string> =>
-  (block.mode === 'live' || block.growing ? liveBlockCache : fullBlockCache);
+  (block.mode === 'live' ? liveBlockCache : fullBlockCache);
 
 /** Content-addressed cache key for a markdown block. */
 const markdownBlockCacheKey = (
@@ -1193,11 +1076,10 @@ export const getCachedMarkdownBlocks = (
   text: string,
   imageMode: MarkdownImageMode = 'inline',
   rawHtml: MarkdownRawHtmlMode = 'escape',
-  growing = false,
 ): RenderedBlock[] | null => {
   if (!text) return [];
 
-  const blocks = streamBlocks(text, false, rawHtml, growing);
+  const blocks = streamBlocks(text, false, rawHtml);
   const rendered: RenderedBlock[] = [];
   for (const block of blocks) {
     const contentHash = blockFingerprint(block);
@@ -1283,11 +1165,10 @@ export const renderMarkdownBlocksSync = (
   streaming: boolean,
   imageMode: MarkdownImageMode = 'inline',
   rawHtml: MarkdownRawHtmlMode = 'escape',
-  growing = streaming,
 ): RenderedBlock[] => {
   if (!text) return [];
 
-  return streamBlocks(text, streaming, rawHtml, growing).map((block) => {
+  return streamBlocks(text, streaming, rawHtml).map((block) => {
     const contentHash = blockFingerprint(block);
     const id = markdownBlockCacheKey(contentHash, block.mode, block.highlight, imageMode, rawHtml);
     const cache = cacheFor(block);
@@ -1350,11 +1231,10 @@ export const renderMarkdownBlocks = async (
   streaming: boolean,
   imageMode: MarkdownImageMode = 'inline',
   rawHtml: MarkdownRawHtmlMode = 'escape',
-  growing = streaming,
 ): Promise<RenderedBlock[]> => {
   if (!text) return [];
 
-  const blocks = streamBlocks(text, streaming, rawHtml, growing);
+  const blocks = streamBlocks(text, streaming, rawHtml);
   return Promise.all(
     blocks.map(async (block) => {
       const contentHash = blockFingerprint(block);
