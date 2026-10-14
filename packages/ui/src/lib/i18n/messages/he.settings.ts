@@ -4,6 +4,11 @@ import { linearIntegrationI18n } from './linear-integration.i18n';
 import { thirdPartyIntegrationI18n } from './third-party-integrations.i18n';
 import { extensionCatalogI18n } from './extension-catalog.i18n';
 export const settingsDict = {
+  'settings.providers.page.auth.command.accountName': 'שם חשבון (אופציונלי)',
+  'settings.providers.page.auth.command.devinHint': 'במארח OpenCode, היכנסו ל-Devin Desktop ואז סגרו אותו לפני החיבור. כדי להוסיף חשבון נוסף, החליפו את ההתחברות באפליקציית שולחן העבודה והתחברו שוב. בחרו "שימוש" ברשימת החשבונות השמורים כדי לעבור בין חשבונות.',
+  'settings.providers.page.auth.command.waiting': 'מתחבר במארח OpenCode…',
+  'settings.providers.page.toast.commandConnected': 'הספק חובר',
+  'settings.providers.page.toast.commandConnectFailed': 'לא ניתן היה להתחבר במארח OpenCode. נסו להתחבר שוב.',
   'settings.sourceControl.ssh.title': 'מפתחות SSH',
   'settings.sourceControl.ssh.load': 'הצג מפתחות',
   'settings.sourceControl.ssh.discover': 'חפש מפתחות ב-~/.ssh',
@@ -1734,6 +1739,8 @@ export const settingsDict = {
   'settings.providers.page.models.capability.reasoning': 'חשיבה',
   'settings.providers.page.models.capability.imageInput': 'קלט תמונה',
   'settings.providers.page.models.tokenBadge.context': 'הקשר',
+  'settings.providers.page.models.tokenBadge.unknownContext': 'הקשר לא ידוע',
+  'settings.providers.page.models.tokenBadge.unknownOutput': 'פלט לא ידוע',
   'settings.providers.page.models.tokenBadge.output': 'פלט',
   'settings.providers.page.models.actions.hideModelFromSelectors': 'הסתר מודל מהבוררים',
   'settings.providers.page.models.actions.showModelInSelectors': 'הצג מודל בבוררים',

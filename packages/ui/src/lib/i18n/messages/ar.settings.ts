@@ -4,6 +4,11 @@ import { linearIntegrationI18n } from './linear-integration.i18n';
 import { thirdPartyIntegrationI18n } from './third-party-integrations.i18n';
 import { extensionCatalogI18n } from './extension-catalog.i18n';
 export const settingsDict = {
+  'settings.providers.page.auth.command.accountName': 'اسم الحساب (اختياري)',
+  'settings.providers.page.auth.command.devinHint': 'على مضيف OpenCode، سجّل الدخول إلى Devin Desktop ثم أغلقه قبل الاتصال. لإضافة حساب آخر، بدّل تسجيل الدخول في تطبيق سطح المكتب واتصل مرة أخرى. اختر «استخدام» في قائمة الحسابات المحفوظة للتبديل بين الحسابات.',
+  'settings.providers.page.auth.command.waiting': 'جارٍ تسجيل الدخول على مضيف OpenCode…',
+  'settings.providers.page.toast.commandConnected': 'تم توصيل المزوّد',
+  'settings.providers.page.toast.commandConnectFailed': 'تعذّر تسجيل الدخول على مضيف OpenCode. حاول الاتصال مرة أخرى.',
   'settings.sourceControl.ssh.title': 'مفاتيح SSH',
   'settings.sourceControl.ssh.load': 'إظهار المفاتيح',
   'settings.sourceControl.ssh.discover': 'البحث عن مفاتيح في ~/.ssh',
@@ -1734,6 +1739,8 @@ export const settingsDict = {
   'settings.providers.page.models.capability.reasoning': 'التفكير',
   'settings.providers.page.models.capability.imageInput': 'إدخال الصور',
   'settings.providers.page.models.tokenBadge.context': 'سياق',
+  'settings.providers.page.models.tokenBadge.unknownContext': 'السياق غير معروف',
+  'settings.providers.page.models.tokenBadge.unknownOutput': 'المخرجات غير معروفة',
   'settings.providers.page.models.tokenBadge.output': 'إخراج',
   'settings.providers.page.models.actions.hideModelFromSelectors': 'إخفاء النموذج من المحددات',
   'settings.providers.page.models.actions.showModelInSelectors': 'إظهار النموذج في المحددات',

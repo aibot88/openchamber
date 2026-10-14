@@ -56,7 +56,7 @@ beforeEach(async () => {
   const { ProviderOAuthMethods } = await import('./ProviderOAuthMethods');
   container = document.createElement('div'); document.body.append(container); root = createRoot(container);
   await act(async () => root.render(
-    <I18nContext.Provider value={{ locale: 'en', locales: ['en'], setLocale: () => {}, label: () => 'English', t: (key) => dict[key] }}>
+    <I18nContext.Provider value={{ locale: 'en', locales: ['en'], direction: 'ltr', setLocale: () => {}, label: () => 'English', t: (key) => dict[key] }}>
       <ProviderOAuthMethods integrationId="fixture-command" methods={[{ type: 'command', id: 'desktop-import', label: 'Import fixture desktop login' }]}
         directory="/fixture/project" onConnected={() => { connected++; if (refreshFails) throw new Error('Synthetic catalog failure'); }} />
     </I18nContext.Provider>,

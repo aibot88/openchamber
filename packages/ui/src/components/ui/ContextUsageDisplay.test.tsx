@@ -6,7 +6,7 @@ import { dict } from '@/lib/i18n/messages/en';
 import { ContextUsageDisplay } from './ContextUsageDisplay';
 
 const render = (limit: number) => renderToStaticMarkup(
-  <I18nContext.Provider value={{ locale: 'en', locales: ['en'], setLocale: () => {}, label: () => 'English', t: (key) => dict[key] }}>
+  <I18nContext.Provider value={{ locale: 'en', locales: ['en'], direction: 'ltr', setLocale: () => {}, label: () => 'English', t: (key) => dict[key] }}>
     <ContextUsageDisplay reading={{ state: 'measured', totalTokens: 20_000, percentage: 10 }} contextLimit={limit} showPercentIcon />
   </I18nContext.Provider>,
 );
