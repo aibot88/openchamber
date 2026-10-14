@@ -9,7 +9,7 @@ describe("subscription model catalog", () => {
       expect(model.providerID).toBe(Provider.ID.make("google-ai-pro"));
       expect(model.enabled).toBe(true);
       expect(model.capabilities.tools).toBe(true);
-      expect(model.limit).toEqual({ context: 200_000, output: 32_000 });
+      expect(model.limit).toEqual({ context: 0, output: 0 });
     }
   });
 

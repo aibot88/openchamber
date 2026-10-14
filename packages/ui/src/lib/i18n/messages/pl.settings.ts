@@ -4,6 +4,11 @@ import { linearIntegrationI18n } from './linear-integration.i18n';
 import { thirdPartyIntegrationI18n } from './third-party-integrations.i18n';
 import { extensionCatalogI18n } from './extension-catalog.i18n';
 export const settingsDict = {
+  'settings.providers.page.auth.command.accountName': 'Nazwa konta (opcjonalnie)',
+  'settings.providers.page.auth.command.devinHint': 'Zaloguj się do Devin Desktop na hoście OpenCode, a następnie zamknij aplikację przed połączeniem. Aby dodać inne konto, zmień logowanie w aplikacji i połącz się ponownie. Wybierz Użyj na liście zapisanych kont, aby przełączyć konto.',
+  'settings.providers.page.auth.command.waiting': 'Logowanie na hoście OpenCode…',
+  'settings.providers.page.toast.commandConnected': 'Połączono z dostawcą',
+  'settings.providers.page.toast.commandConnectFailed': 'Nie udało się zalogować na hoście OpenCode. Spróbuj połączyć się ponownie.',
   'settings.sourceControl.ssh.title': 'Klucze SSH',
   'settings.sourceControl.ssh.load': 'Pokaż klucze',
   'settings.sourceControl.ssh.discover': 'Znajdź klucze w ~/.ssh',
@@ -1762,6 +1767,8 @@ export const settingsDict = {
   'settings.providers.page.models.noModelsMatchFilter': 'Żadne modele nie pasują do tego filtra.',
   'settings.providers.page.models.title': 'Dostępne modele',
   'settings.providers.page.models.tokenBadge.context': 'ctx',
+  'settings.providers.page.models.tokenBadge.unknownContext': 'Nieznany limit kontekstu',
+  'settings.providers.page.models.tokenBadge.unknownOutput': 'Nieznany limit wyjścia',
   'settings.providers.page.models.tokenBadge.output': 'out',
   'settings.providers.page.state.loading': 'Ładowanie...',
   'settings.providers.page.state.unableToLoadProviderList': 'Nie udało się załadować listy dostawców',

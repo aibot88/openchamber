@@ -226,8 +226,9 @@ Two further rules on this readout:
   `Math.round`, so routing the display value through it turned 33.6% into
   "34.0%" and made the panel disagree with the header. Rounding is still right
   for the colour threshold, which is what the header feeds it.
-- When the model exposes no context limit, the percentage falls back to the
-  store's own default limit instead of disappearing.
+- When the model exposes no positive finite context limit, measured token counts
+  remain available but the percentage is unknown. The panel shows a dash and a
+  context-unknown label. It does not divide by an invented 200,000-token window.
 
 There is no cost-only fallback row. A row labelled "Context" showing nothing but
 a price is not a context reading; cost rides along with the percentage or waits

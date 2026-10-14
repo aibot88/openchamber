@@ -1,9 +1,9 @@
 # Google AI Pro subscription provider for OpenCode 2
 
-Version 0.2.1 adds an experimental Antigravity OAuth provider to OpenCode 2.
+Version 0.2.2 provides an experimental Antigravity OAuth provider for OpenCode 2.
 OpenChamber displays it as `Google AI Pro (unofficial)` and retains the existing
 session when the user switches A -> Gemini -> A. OpenCode owns history, tool
-execution and permissions. The application packages in this fork are unchanged.
+execution and permissions. The provider keeps model and variant IDs stable.
 
 Google's [Antigravity terms](https://antigravity.google/terms), clause 6, prohibit
 third-party subscription access. This provider may cause account suspension.
@@ -67,8 +67,8 @@ an empty catalog disables the models. Discovery does not establish inference
 permission or available quota.
 
 Thinking budgets follow the pinned CortexKit implementation. Pro uses 1001 and
-10001; Flash uses 1000, 4000 and -1. Context and output limits remain conservative
-at 200,000 and 32,000 tokens until live validation.
+10001; Flash uses 1000, 4000 and -1. Context and output limits are populated from
+explicit account catalog fields and otherwise remain unknown.
 
 ## Project initialization
 
@@ -109,6 +109,21 @@ definitions and tool-specific validation stay intact. Tool arguments, results,
 IDs, signatures, system instructions and message history are not cleaned.
 OpenCode's normal context compaction and model context limits still apply.
 
+Version 0.2.2 removes the uniform 200,000 context and 32,000 output declarations.
+Account catalog fields `inputTokenLimit` and `outputTokenLimit` populate each
+wire route's limits when present. Missing, zero or malformed metadata stays
+unknown. An ambiguous `maxTokens` value is not used as a context window.
+The provider does not fill gaps from Gemini's API specifications.
+
+OpenCode 2 variants have no limit field. The public model declares the smallest
+reported input/output bounds across its available routes. An unreported bound
+on any selectable route makes that common bound unknown. The explicit input
+bound is also set as `limit.input`, since Google's input and output limits are
+separate. Requests validate an explicit output cap against the exact selected
+route and preserve it. No cap is clamped or replaced with 32,000. OpenCode may
+supply its own per-request output budget. Reported metadata does not establish
+the service's actual acceptance boundary; that requires authorized inference.
+
 Authentication, quota and network failures stop inference. The adapter does not
 retry inference, rotate accounts, switch models or use a paid API fallback.
 Choose another provider manually in the same conversation when needed.
@@ -132,12 +147,13 @@ Run from this directory:
 ```sh
 bun test
 bun run type-check
+bun run build
 bun run probe:runtime
 bun run probe:continuation
 ```
 
-The unit suite has 123 passing tests. The continuation probe runs the real
-OpenCode 2.0.25 agent loop against synthetic responses and checks 39 emitted tool
+The unit suite has 131 passing tests. The continuation probe runs the real
+OpenCode agent loop against synthetic responses and checks 39 emitted tool
 declarations. Each fixture tool executes once, both results survive the model
 switches, and the tests send 0 Google model requests. See [VALIDATION.md](VALIDATION.md)
 for the failed real-account stages and checks still required.
@@ -146,6 +162,10 @@ The Gemini-only code adapts MIT-licensed CLIProxyAPI and CortexKit implementatio
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) records pinned commits, source
 files and license text. The OAuth dependency supplies only public desktop-client
 constants; its V1 plugin, account pool and fallback code are not loaded.
+
+`dist` contains a standalone bundle and the bundled dependencies' license files.
+The OpenCode packages omit LICENSE in their npm archives; their pinned 2.0.25
+repository license is retained in `LICENSE.OpenCode.txt` and copied into `dist`.
 
 ## Disable
 

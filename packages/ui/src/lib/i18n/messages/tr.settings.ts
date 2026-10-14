@@ -4,6 +4,11 @@ import { linearIntegrationI18n } from './linear-integration.i18n';
 import { thirdPartyIntegrationI18n } from './third-party-integrations.i18n';
 import { extensionCatalogI18n } from './extension-catalog.i18n';
 export const settingsDict = {
+  'settings.providers.page.auth.command.accountName': 'Hesap adı (isteğe bağlı)',
+  'settings.providers.page.auth.command.devinHint': 'OpenCode sunucusunda Devin Desktop\'a giriş yapın, ardından bağlanmadan önce masaüstü uygulamasından çıkın. Başka bir hesap eklemek için masaüstündeki hesabı değiştirip yeniden bağlanın. Hesap değiştirmek için kayıtlı hesaplar listesinden Kullan\'ı seçin.',
+  'settings.providers.page.auth.command.waiting': 'OpenCode sunucusunda oturum açılıyor…',
+  'settings.providers.page.toast.commandConnected': 'Sağlayıcı bağlandı',
+  'settings.providers.page.toast.commandConnectFailed': 'OpenCode sunucusunda oturum açılamadı. Yeniden bağlanmayı deneyin.',
   'settings.themeImport.selectAll': 'Tümünü seç',
   'settings.themeImport.deselectAll': 'Tümünün seçimini kaldır',
   'settings.themeImport.complete': 'İçe aktarma tamamlandı',
@@ -1635,6 +1640,8 @@ export const settingsDict = {
   'settings.providers.page.models.capability.reasoning': 'Akıl yürütme',
   'settings.providers.page.models.capability.imageInput': 'Görsel girişi',
   'settings.providers.page.models.tokenBadge.context': 'ctx',
+  'settings.providers.page.models.tokenBadge.unknownContext': 'Bağlam sınırı bilinmiyor',
+  'settings.providers.page.models.tokenBadge.unknownOutput': 'Çıktı sınırı bilinmiyor',
   'settings.providers.page.models.tokenBadge.output': 'çıktı',
   'settings.providers.page.models.actions.hideModelFromSelectors': 'Modeli seçicilerden gizle',
   'settings.providers.page.models.actions.showModelInSelectors': 'Modeli seçicilerde göster',

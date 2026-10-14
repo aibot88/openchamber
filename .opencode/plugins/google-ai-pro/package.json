@@ -1,10 +1,11 @@
 {
   "name": "opencode-antigravity-subscription-v2",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "type": "module",
   "main": "./index.ts",
   "scripts": {
+    "build": "bun run build.ts",
     "test": "bun test",
     "type-check": "tsc --noEmit",
     "probe:runtime": "bun run probe-runtime.ts",

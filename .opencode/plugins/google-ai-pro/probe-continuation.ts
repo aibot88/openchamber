@@ -16,6 +16,7 @@ const reportedVersion = execFileSync(binary, ["--version"], { encoding: "utf8", 
 const version = reportedVersion.match(/^(?:opencode v)?(2\.\d+\.\d+(?:[-+][\w.-]+)?)$/)?.[1];
 if (!version) throw new Error("This probe requires OpenCode 2. Set OPENCODE_BIN to the matching CLI.");
 const root = await mkdtemp(join(process.env.PROBE_TMPDIR ?? tmpdir(), "gemini-continuation-"));
+const unknownLimits = process.env.PROBE_UNKNOWN_LIMITS === "1";
 const project = join(root, "project");
 const plugin = join(root, "fixture-plugin");
 await mkdir(project); await mkdir(plugin);
@@ -38,10 +39,12 @@ const fixtures = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request
   const url = request.headers.get("x-fixture-upstream") ?? request.url;
   audits.push({ phase, url, payload });
   if (url.endsWith(":fetchAvailableModels")) {
-    return Response.json({ models: { "gemini-3.1-pro-low": {}, "gemini-pro-agent": {},
-      "gemini-3.8-flash-low": {}, "gemini-3.8-flash-medium": {}, "gemini-3.8-flash-high": {} } });
+    return Response.json({ models: Object.fromEntries(["gemini-3.1-pro-low", "gemini-pro-agent",
+      "gemini-3.8-flash-low", "gemini-3.8-flash-medium", "gemini-3.8-flash-high"].map((id) =>
+      [id, unknownLimits ? {} : { inputTokenLimit: 1_048_576, outputTokenLimit: 65_536 }])) });
   }
   const inner = payload.request ?? payload;
+  if (payload.request && inner.generationConfig?.maxOutputTokens !== 65_536) throw new Error("The requested 64K output budget was changed.");
   if (payload.request) for (const tool of inner.tools ?? []) for (const declaration of tool.functionDeclarations ?? []) {
     if (declaration.parameters !== undefined) { assertSubscriptionSchema(declaration.parameters); checkedDeclarations++; }
     if (declaration.response !== undefined) assertSubscriptionSchema(declaration.response, true);
@@ -82,6 +85,7 @@ export default Plugin.define({ id: 'fixture.continuation', async setup(ctx) {
     package: '@opencode/ai/providers/google', settings: { apiKey: 'fixture', baseURL: '${origin}/v1beta' },
   }, models: [Model.Info.default(Provider.ID.make('offline-a'), Model.ID.make('gemini-3.1-pro'))] }));
   await ctx.session.hook('title', event => { event.result = 'Fixture continuation'; });
+  await ctx.session.hook('context', event => { event.options.maxTokens = 65536; }, { providerID: 'google-ai-pro' });
   await ctx.tool.transform(editor => {
     for (const name of ['fixture_read', 'fixture_confirm']) editor.add({ name,
       description: 'Isolated fixture tool', input: name === 'fixture_confirm' ? ${JSON.stringify(confirmInput)} : { type: 'object', properties: {}, additionalProperties: false },
@@ -159,6 +163,9 @@ try {
     await client.session.switchModel({ sessionID, model: { providerID: step.providerID, id: step.id, variant: step.variant } });
     await client.session.prompt({ sessionID, text: "Continue the isolated tool fixture without repeating earlier reads." });
     await client.session.wait({ sessionID });
+    const catalogModels = (await client.model.list()).data.filter((model) => model.providerID === "google-ai-pro");
+    if (catalogModels.length !== 2 || catalogModels.some((model) => model.limit.context !== (unknownLimits ? 0 : 1_048_576) ||
+      model.limit.output !== (unknownLimits ? 0 : 65_536))) throw new Error("The host lost the account catalog limits.");
     const context = await client.session.context({ sessionID });
     const last = context.at(-1);
     if (last && JSON.stringify(last).includes('"type":"error"')) throw new Error(`Agent loop failed in ${phase}: ${JSON.stringify(last)}`);
@@ -195,6 +202,7 @@ try {
     actualHostToolExecutions: tools, historyAndToolResultsPreserved: true, subscriptionBridgeRequests: subscription.length,
     http1SenderAndGzipVerifiedInHost: true,
     strictlyValidatedHostDeclarations: checkedDeclarations, positiveLimitSchemaRegression: true, keywordNamedArgumentsPreserved: true,
+    catalogLimitsPreserved: true, catalogLimitsUnknown: unknownLimits, explicitOutputBudgetPreserved: 65_536,
     googleRequests: 0, fixtureDirectory: root }, null, 2));
 } catch (error) {
   await writeFile(join(root, "runtime-output.log"), output);

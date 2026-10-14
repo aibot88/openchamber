@@ -47,6 +47,14 @@ export async function subscriptionRequest(
     Object.entries(budgets[publicID]).find(([, value]) => value === budget)?.[0] ?? defaultLevel;
   const wireID = catalog.routes.get(publicID)?.get(level);
   if (!wireID) throw new Error(`Google's subscription catalog does not offer the selected model/variant (${publicID}/${level}). Switch manually; no fallback was attempted.`);
+  const requestedOutput = generationConfig.maxOutputTokens;
+  if (requestedOutput !== undefined) {
+    if (typeof requestedOutput !== "number" || !Number.isSafeInteger(requestedOutput) || requestedOutput <= 0 || requestedOutput > 0x7fffffff) {
+      throw new Error("Invalid Gemini output token limit.");
+    }
+    const outputLimit = catalog.routeLimits.get(wireID)?.output ?? 0;
+    if (outputLimit > 0 && requestedOutput > outputLimit) throw new Error("Requested output exceeds the selected Gemini route's catalog limit. No truncation or tier fallback was attempted.");
+  }
   const wireBudget = (budgets[publicID] as Record<string, number>)[level];
   delete thinkingConfig.thinkingLevel;
   thinkingConfig.thinkingBudget = wireBudget;

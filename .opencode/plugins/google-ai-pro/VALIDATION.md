@@ -1,12 +1,13 @@
 # Gemini provider validation
 
-Version 0.2.1 was tested on macOS arm64 with OpenChamber 2.2.0 and its bundled
-OpenCode 2.0.25 on 2026-10-11. The fork's application dependency pins are unchanged.
+Version 0.2.2 was tested on macOS arm64 with the bundled OpenCode 2.0.26 on
+2026-10-14. Version 0.2.1 was previously checked with OpenCode 2.0.25. The plugin
+continues to use its pinned 2.0.25 SDK dependencies.
 Other OpenCode versions and operating systems require their own runtime checks.
 
 ## Passed checks
 
-- `bun test`: 123 passed, 0 failed across 8 files.
+- `bun test`: 131 passed, 0 failed across 8 files.
 - `bun run type-check`.
 - Syntax check of the generated Node bundle.
 - Isolated OpenCode runtime probe with provider and OAuth registration, both model
@@ -23,6 +24,12 @@ Other OpenCode versions and operating systems require their own runtime checks.
   conversion, cancellation, stream failures and rejected API billing destinations.
 - Synthetic OAuth callbacks, PKCE/state validation, token refresh, project lookup
   and bounded managed-project initialization.
+- Per-route reported limits, shared bounds across variants, partial/malformed
+  metadata, unknown limits and account/project isolation. Neither `maxTokens`
+  nor public Gemini API specifications are used as a context fallback.
+- Offline continuation with a catalog that reports no token limits. The host
+  preserves zero/unknown metadata and an explicit 65,536-token request budget.
+  The fixture returns short text; this is not a 65,536-token generation test.
 
 All automated Google responses and credentials are synthetic. The tests send
 0 Google model requests and use isolated homes, configurations and databases.
@@ -31,10 +38,13 @@ publish it as an official private-endpoint validator.
 
 ## Fork packaging checks
 
-The imported plugin passes the same 123 tests, its separate type-check and both
-OpenCode 2.0.25 runtime probes in its new repository directory. Production
-modules retain their original contents. Probe scripts accept portable temporary
-directories, select an OpenCode binary and report its actual version.
+The repository plugin passes its separate type-check, standalone bundle build
+and source/bundle continuation on OpenCode 2.0.26. Probe scripts accept portable
+temporary directories, select an OpenCode binary and report its actual version.
+The original `gemini-subscription-provider` prototype is not the current build
+source. The installed legacy bundle has not been replaced during this correction.
+Its package manifest still says 0.1.0, so source-version claims must not be made
+from that manifest. The new bundle manifest is generated from version 0.2.2.
 
 The repository's pre-commit script previously tried to parse oxlint's
 `No files found to lint` prefix as JSON when every changed source file was under
@@ -70,6 +80,9 @@ successful generation or prove that licensing and quota checks will pass.
 - Real token refresh and managed onboarding when the account needs them.
 - Live A -> Gemini -> A tool-driven continuation and signature compatibility.
 - Quota behavior and private endpoint availability.
+- Whether the actual subscription catalog reports explicit token-limit fields.
+  The live OpenCode registry still reflects the installed legacy declarations,
+  not the corrected parser. Real long-context/output acceptance is untested.
 - Runtime checks on other OpenCode versions, Windows, Linux, VS Code and remote
   deployments. Mobile clients use the connected server's OpenCode process.
 
@@ -81,6 +94,7 @@ Run from this plugin directory:
 bun install --frozen-lockfile --ignore-scripts
 bun test
 bun run type-check
+bun run build
 bun run probe:runtime
 bun run probe:continuation
 ```
@@ -94,3 +108,5 @@ CLI's actual version and reject OpenCode 1.
 `PROBE_PLUGIN_ENTRY` selects the continuation probe's module entrypoint. These
 options affect test loading only; the production transport has fixed endpoint
 allowlists and accepts no endpoint override from environment or configuration.
+`PROBE_UNKNOWN_LIMITS=1` supplies missing limit metadata in the isolated
+continuation fixture. It never changes production catalog parsing.

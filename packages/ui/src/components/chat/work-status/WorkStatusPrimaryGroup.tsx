@@ -279,6 +279,11 @@ export const WorkStatusPrimaryGroup: React.FC<Props> = ({ sessionId, directory, 
                   {t('contextUsage.compacted.description')}
                 </p>
               ) : null}
+              {contextUsage.state === 'measured' && contextUsage.percent === null ? (
+                <p className="mx-1 mb-1 text-[11px] leading-4 text-muted-foreground">
+                  {t('settings.providers.page.models.tokenBadge.unknownContext')}
+                </p>
+              ) : null}
               {/* Caption, not a row: it explains the figure above it rather
                   than reporting a reading of its own, so it carries no icon
                   and no label column. */}

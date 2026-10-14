@@ -28,7 +28,7 @@ const catalog = catalogFromPayload({ models: Object.fromEntries([
 ].map((id) => [id, {}])) });
 const subscriptionRequest = (input: Request, value: Credential.Value | undefined, sessionID: string) => convertRequest(input, value, sessionID, catalog);
 
-function request(body = history, action = "streamGenerateContent") {
+function request(body: unknown = history, action = "streamGenerateContent") {
   return new Request(`${BASE_URL}/models/gemini-3.1-pro:${action}?alt=sse`, {
     method: "POST", headers: { "x-goog-api-key": "must-be-removed", "x-goog-user-project": "wrong-project" },
     body: JSON.stringify(body),
@@ -57,6 +57,21 @@ describe("subscription transport", () => {
     const title = await (await subscriptionRequest(request(), credential, "ses:title")).json();
     expect(primary.request.sessionId).not.toBe(title.request.sessionId);
   });
+  test("validates the exact route's output limit without a 32K cap or silent clamping", async () => {
+    const catalog = catalogFromPayload({ models: {
+      "gemini-3.1-pro-low": { inputTokenLimit: 1_048_576, outputTokenLimit: 4096 },
+      "gemini-pro-agent": { inputTokenLimit: 1_048_576, outputTokenLimit: 65_536 },
+    } });
+    const original = request({ ...history, generationConfig: { ...history.generationConfig, maxOutputTokens: 65_536 } });
+    const wire = await (await convertRequest(original, credential, "session", catalog, "high")).json();
+    expect(wire.request.generationConfig.maxOutputTokens).toBe(65_536);
+    expect(await original.clone().json()).toEqual({ ...history, generationConfig: { ...history.generationConfig, maxOutputTokens: 65_536 } });
+    await expect(convertRequest(original, credential, "session", catalog, "low")).rejects.toThrow("catalog limit");
+    for (const value of [0, -1, 1.5, "65536"]) {
+      const invalid = request({ ...history, generationConfig: { ...history.generationConfig, maxOutputTokens: value } });
+      await expect(convertRequest(invalid, credential, "session", catalog, "high")).rejects.toThrow("Invalid Gemini output");
+    }
+  });
 
   test("routes Flash's native backend ID without changing history, tools, account or endpoint", async () => {
     const flash = subscriptionModels.find((model) => model.id === "gemini-3.8-flash");
@@ -79,6 +94,14 @@ describe("subscription transport", () => {
         expect(converted.url).toBe(`${SUBSCRIPTION_ENDPOINT}/v1internal:${action}${action === "streamGenerateContent" ? "?alt=sse" : ""}`);
       }
     }
+  });
+  test("an unknown output ceiling does not create a 32K cap; an absent request cap stays absent", async () => {
+    const catalog = catalogFromPayload({ models: { "gemini-pro-agent": {} } });
+    const larger = request({ ...history, generationConfig: { maxOutputTokens: 128_000 } });
+    const wire = await (await convertRequest(larger, credential, "session", catalog, "high")).json();
+    expect(wire.request.generationConfig.maxOutputTokens).toBe(128_000);
+    const absent = request({ ...history, generationConfig: { thinkingConfig: history.generationConfig.thinkingConfig } });
+    expect((await (await convertRequest(absent, credential, "session", catalog, "high")).json()).request.generationConfig.maxOutputTokens).toBeUndefined();
   });
 
   test("refuses missing auth, API keys, wrong method and missing project", async () => {

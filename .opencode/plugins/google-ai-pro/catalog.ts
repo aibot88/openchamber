@@ -1,5 +1,5 @@
 // Account-bound discovery follows CLIProxyAPI's fetchAvailableModels contract.
-// Same-family variant aliases/budgets follow CortexKit's live-catalog resolver.
+// Same-family variant aliases follow CortexKit's live-catalog resolver.
 import { createHash } from "node:crypto";
 import { Model, type Credential } from "@opencode/plugin";
 import { z } from "zod";
@@ -8,15 +8,32 @@ import { jsonResponse, type Fetch } from "./google-http.ts";
 import { subscriptionModels } from "./models.ts";
 
 const schema = z.object({ models: z.record(z.string(), z.unknown()) });
+const tokenLimit = z.number().int().nonnegative().max(0x7fffffff);
+const limitSchema = z.object({ inputTokenLimit: tokenLimit.catch(0).default(0), outputTokenLimit: tokenLimit.catch(0).default(0) });
 export type Catalog = {
   models: readonly Model.Info[];
   routes: ReadonlyMap<string, ReadonlyMap<string, string>>;
+  routeLimits: ReadonlyMap<string, Model.Info["limit"]>;
 };
 
 export function catalogFromPayload(payload: unknown): Catalog {
   const parsed = schema.safeParse(payload);
   if (!parsed.success) throw new Error("Subscription model discovery returned an invalid catalog.");
-  const ids = new Set(Object.keys(parsed.data.models).map((id) => id.trim().toLowerCase()));
+  const ids = new Set<string>();
+  const routeLimits = new Map<string, Model.Info["limit"]>();
+  for (const [key, value] of Object.entries(parsed.data.models)) {
+    const id = key.trim().toLowerCase();
+    if (!id || ids.has(id)) throw new Error("Subscription catalog contains an invalid or duplicate model ID.");
+    ids.add(id);
+    // Only explicitly named input/output token limits have known semantics.
+    // In particular, an ambiguous maxTokens field is never a context window.
+    const limits = limitSchema.safeParse(value);
+    routeLimits.set(id, limits.success ? {
+      context: limits.data.inputTokenLimit,
+      ...(limits.data.inputTokenLimit ? { input: limits.data.inputTokenLimit } : {}),
+      output: limits.data.outputTokenLimit,
+    } : { context: 0, output: 0 });
+  }
   const routes = new Map<string, Map<string, string>>();
   const models: Model.Info[] = [];
   for (const model of subscriptionModels) {
@@ -31,15 +48,22 @@ export function catalogFromPayload(payload: unknown): Catalog {
     }
     routes.set(model.id, variants);
     const defaultLevel = model.id === "gemini-3.1-pro" ? "low" : "medium";
+    const limits = [...new Set(variants.values())].map((wireID) => routeLimits.get(wireID)!);
+    // V2 variants cannot declare limits. Register the common bound across all
+    // selectable routes; request validation uses the exact selected route.
+    const context = limits.length ? Math.min(...limits.map((limit) => limit.context)) : 0;
+    const output = limits.length ? Math.min(...limits.map((limit) => limit.output)) : 0;
+    const limit = { context, ...(context ? { input: context } : {}), output };
     // Keep the user's default, even if it is unavailable. Never silently use a
     // different thinking tier. Individual available variants remain selectable.
     models.push({ ...model, enabled: variants.size > 0,
+      limit,
       variants: model.variants.filter((variant) => variants.has(variant.id)),
       modelID: Model.ID.make(String(model.id)),
-      name: variants.has(defaultLevel) ? model.name : `${model.name} · default unavailable`,
+      name: `${model.name}${variants.has(defaultLevel) ? "" : " · default unavailable"}${!context || !output ? " · token limits not fully reported" : ""}`,
     });
   }
-  return { models, routes };
+  return { models, routes, routeLimits };
 }
 
 export function credentialProject(credential: Credential.Value | undefined): string {

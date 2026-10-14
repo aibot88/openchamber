@@ -4,6 +4,11 @@ import { linearIntegrationI18n } from './linear-integration.i18n';
 import { thirdPartyIntegrationI18n } from './third-party-integrations.i18n';
 import { extensionCatalogI18n } from './extension-catalog.i18n';
 export const settingsDict = {
+  'settings.providers.page.auth.command.accountName': 'Nome da conta (opcional)',
+  'settings.providers.page.auth.command.devinHint': 'Entre no Devin Desktop no host do OpenCode e feche o aplicativo antes de conectar. Para adicionar outra conta, troque o login no aplicativo e conecte novamente. Selecione Usar na lista de contas salvas para trocar de conta.',
+  'settings.providers.page.auth.command.waiting': 'Entrando no host do OpenCode…',
+  'settings.providers.page.toast.commandConnected': 'Provedor conectado',
+  'settings.providers.page.toast.commandConnectFailed': 'Não foi possível entrar no host do OpenCode. Tente conectar novamente.',
   'settings.sourceControl.ssh.title': 'Chaves SSH',
   'settings.sourceControl.ssh.load': 'Mostrar chaves',
   'settings.sourceControl.ssh.discover': 'Procurar chaves em ~/.ssh',
@@ -1690,6 +1695,8 @@ export const settingsDict = {
   "settings.providers.page.models.capability.reasoning": "Raciocínio",
   "settings.providers.page.models.capability.imageInput": "Entrada de imagem",
   "settings.providers.page.models.tokenBadge.context": "ctx",
+  "settings.providers.page.models.tokenBadge.unknownContext": "Contexto desconhecido",
+  "settings.providers.page.models.tokenBadge.unknownOutput": "Limite de saída desconhecido",
   "settings.providers.page.models.tokenBadge.output": "out",
   "settings.providers.page.models.actions.hideModelFromSelectors": "Ocultar modelo em seletores",
   "settings.providers.page.models.actions.showModelInSelectors": "Mostrar modelo em seletores",

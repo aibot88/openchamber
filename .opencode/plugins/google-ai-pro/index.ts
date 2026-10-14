@@ -19,7 +19,7 @@ export async function setup(ctx: Context, testing: { send?: Fetch } = {}) {
   const send = testing.send ?? http.fetch;
   const bridge = await startSubscriptionBridge(send);
   const loadCatalog = createCatalogLoader(send, { signal: lifecycle.signal });
-  const unverifiedModels = subscriptionModels.map((model) => ({ ...model, name: `${model.name} · catalog not verified` }));
+  const unverifiedModels = subscriptionModels.map((model) => ({ ...model, name: `${model.name} · catalog not verified · token limits not reported` }));
   const inventory: { models: typeof subscriptionModels; connection?: ConnectionInfo } = { models: unverifiedModels };
   let revision = 0;
   await ctx.provider.transform((editor) => {
