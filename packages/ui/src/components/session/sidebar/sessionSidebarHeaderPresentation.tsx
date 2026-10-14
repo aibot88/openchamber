@@ -4,12 +4,11 @@ import { cn } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
 import type { SessionSidebarActivityKey } from './sessionSidebarRowModel';
 
-const ACTIVITY_ICON = { work: 'eye', chats: 'chat-4', 'active-now': 'history', timeline: 'folder' } as const;
+const ACTIVITY_ICON = { pinned: 'pushpin', work: 'eye', chats: 'chat-4' } as const;
 const ACTIVITY_TITLE_KEY = {
+  pinned: 'sessions.sidebar.activity.pinnedTitle',
   work: 'sessions.sidebar.work.title',
   chats: 'sessions.sidebar.activity.chatsTitle',
-  'active-now': 'sessions.sidebar.activity.recentTitle',
-  timeline: 'sessions.sidebar.activity.timelineTitle',
 } as const;
 
 export const SessionSidebarActivityHeader: React.FC<{
@@ -19,30 +18,10 @@ export const SessionSidebarActivityHeader: React.FC<{
   alwaysShowActions: boolean;
   onToggle: () => void;
   onNewChat: () => void;
-  /** Timeline zones drop the leading icon and take a taller band; the
-      collapse chevron still appears on hover in the icon slot. */
-  timelineView?: boolean;
-}> = ({ activityKey, collapsed, forceExpanded, alwaysShowActions, onToggle, onNewChat, timelineView = false }) => {
+}> = ({ activityKey, collapsed, forceExpanded, alwaysShowActions, onToggle, onNewChat }) => {
   const { t } = useI18n();
   const chats = activityKey === 'chats';
-  if (timelineView) {
-    // Timeline zone header: no icon, text flush with the rows' left edge, and
-    // an always-visible chevron right after the title showing collapse state.
-    return <div className="relative group/chats -me-2">
-      <button
-        type="button"
-        onClick={forceExpanded ? undefined : onToggle}
-        disabled={forceExpanded}
-        className={cn('group flex w-full items-center gap-1 py-2 ps-1.5 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50', 'pe-3.5')}
-        aria-expanded={!collapsed}
-      >
-        <span className="typography-ui-label font-semibold text-foreground">
-          {t(ACTIVITY_TITLE_KEY[activityKey])}
-        </span>
-        {!forceExpanded ? <Icon name={collapsed ? 'arrow-right-s' : 'arrow-down-s'} className="h-3.5 w-3.5 text-muted-foreground" /> : null}
-      </button>
-    </div>;
-  }
+  // One header in both views, so zones line up with the project headers.
   return <div className="relative group/chats -ms-2.5 -me-2">
     <button
       type="button"
@@ -57,7 +36,8 @@ export const SessionSidebarActivityHeader: React.FC<{
           <Icon name={collapsed ? 'arrow-right-s' : 'arrow-down-s'} className="h-3.5 w-3.5" />
         </span> : null}
       </span>
-      <span className="typography-ui-label font-semibold text-foreground">
+      {/* The size of project headers: zones and projects are sections of equal weight. */}
+      <span className="typography-ui-header font-semibold text-foreground">
         {t(ACTIVITY_TITLE_KEY[activityKey])}
       </span>
     </button>

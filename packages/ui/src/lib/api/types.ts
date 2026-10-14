@@ -305,6 +305,11 @@ export interface GetGitRangeFilesOptions {
 export interface GitRangeFileEntry {
   path: string;
   status: string;
+  /**
+   * Working-tree listings only: changes exactly when this file's patch can
+   * change (merge base moved, or the file was written). Absent elsewhere.
+   */
+  revision?: string;
 }
 
 export interface GitBranchBaseResponse {
@@ -1053,6 +1058,12 @@ interface GitWorktreeAPI {
 export interface GitAPI {
   checkIsGitRepository(directory: string): Promise<boolean>;
   getGitStatus(directory: string, options?: { mode?: 'light'; fresh?: boolean }): Promise<GitStatus>;
+  /**
+   * Warm the status cache for many directories with one request, so the
+   * per-directory `getGitStatus` reads that follow are cache hits. Runtimes
+   * without a batched status read (VS Code) omit it and read one by one.
+   */
+  prefetchProjectStatuses?(directories: string[]): Promise<void>;
   getGitDiff(directory: string, options: GetGitDiffOptions): Promise<GitPathDiffResponse>;
   getGitFileDiff(directory: string, options: GetGitFileDiffOptions): Promise<GitFileDiffResponse>;
   getGitRangeDiff?(directory: string, options: GetGitRangeDiffOptions): Promise<GitDiffResponse>;
@@ -2321,6 +2332,7 @@ interface SkillsInstallSelection {
 export interface SkillsInstallRequest {
   source: string;
   subpath?: string;
+  sourceId?: string;
   gitIdentityId?: string;
   scope: 'user' | 'project';
   targetSource?: 'opencode' | 'agents';
@@ -2337,7 +2349,7 @@ export type SkillsInstallError = SkillsRepoScanError | {
 
 export interface SkillsInstallResponse {
   ok: boolean;
-  installed?: Array<{ skillName: string; scope: 'user' | 'project'; source?: 'opencode' | 'agents' }>;
+  installed?: Array<{ skillName: string; skillDir?: string; scope: 'user' | 'project'; source?: 'opencode' | 'agents' }>;
   skipped?: Array<{ skillName: string; reason: string }>;
   error?: SkillsInstallError;
   requiresReload?: boolean;

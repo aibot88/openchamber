@@ -14,7 +14,7 @@
 
 import type { ContextPartMetadata } from "@/lib/messages/contextParts"
 import { create } from "zustand"
-import type { Metadata, ModelRef, Part, Session, TextPart } from "@/lib/opencode/model"
+import { isSameModelRef, toModelRef, type Metadata, type ModelRef, type Part, type Session, type TextPart } from "@/lib/opencode/model"
 import type { AttachedFile, SessionWorktreeAttachment } from "@/stores/types/sessionTypes"
 import type { PermissionMode } from "@/stores/utils/permissionAutoAccept"
 import type { WorktreeMetadata } from "@/types/worktree"
@@ -33,6 +33,7 @@ import { selectCommandsForDirectory, useCommandsStore } from "@/stores/useComman
 import { selectSkillsForDirectory, useSkillsStore } from "@/stores/useSkillsStore"
 import { getDeferredSafeStorage } from "@/stores/utils/safeStorage"
 import { markPendingUserSendAnimation } from "@/lib/userSendAnimation"
+import { prepareUserMessageResume } from "./user-message-resume"
 import { normalizePath } from "@/lib/pathNormalization"
 import { CHAT_DRAFT_PROJECT_ID, createChatDirectory, deleteChatDirectory, getChatsRootFromDirectory, isChatDirectoryPath, warmChatsRootDirectory } from "@/lib/chatDirectories"
 import { isSpaceArchiveDirectory } from "@/lib/spaces/space-archives"
@@ -150,15 +151,14 @@ export function expandSlashCommandGoalObjective(content: string, commands: GoalC
 export function resolveSendSelection(
   sessionId: string,
   directory: string | undefined,
-  desired: { providerID: string; modelID: string; variant?: string; agent?: string },
+  desired: { providerID: string; modelID: string; variant?: string | null; agent?: string },
 ): { model?: ModelRef; agent?: string } {
   const sessions = getDirectoryState(directory)?.session ?? getAllSyncSessions()
   const session = sessions.find((candidate) => candidate.id === sessionId)
-  const model: ModelRef = { providerID: desired.providerID, id: desired.modelID, variant: desired.variant }
-  const modelChanged = !session?.model
-    || session.model.providerID !== model.providerID
-    || session.model.id !== model.id
-    || session.model.variant !== model.variant
+  // Compared in wire form: an explicit `Default` (null) switches the session
+  // off an effort once, then matches the `"default"` OpenCode records for it.
+  const model = toModelRef({ providerID: desired.providerID, id: desired.modelID, variant: desired.variant })
+  const modelChanged = !session?.model || !isSameModelRef(session.model, model)
   const agentChanged = Boolean(desired.agent) && session?.agent !== desired.agent
   return {
     model: modelChanged ? model : undefined,
@@ -175,7 +175,8 @@ export async function routeMessage(params: {
   modelID: string
   agent?: string
   agentMentionName?: string
-  variant?: string
+  /** `null` is an explicit `Default` thinking level. */
+  variant?: string | null
   inputMode?: "normal" | "shell"
   files?: Array<{ type: "file"; mime: string; url: string; filename: string }>
   additionalParts?: Array<{ text: string; synthetic?: boolean; metadata?: ContextPartMetadata; files?: Array<{ type: "file"; mime: string; url: string; filename: string }>; systemContext?: 'session-knowledge' }>
@@ -341,6 +342,8 @@ type CapturedSendTarget = {
 }
 
 type SendMessageOptions = {
+  /** Explicit composer intent; automated continuations must not restore archives. */
+  userInitiated?: boolean
   target?: CapturedSendTarget
   sessionId?: string
   directory?: string
@@ -432,11 +435,6 @@ export type SessionUIState = {
   abortControllers: Map<string, AbortController>
   isLoading: boolean
   lastLoadedDirectory: string | null
-  // Plan mode - per-session plan file availability (set when plan_enter tool creates a plan)
-  sessionPlanAvailable: Map<string, boolean>
-  markSessionPlanAvailable: (sessionId: string) => void
-  isSessionPlanAvailable: (sessionId: string) => boolean
-
   // Non-Git mode: dismissed signature hash per session, hides bar until new turn arrives
 
   // Actions — UI state management
@@ -479,7 +477,8 @@ export type SessionUIState = {
     attachments?: AttachedFile[],
     agentMentionName?: string,
     additionalParts?: Array<{ text: string; attachments?: AttachedFile[]; synthetic?: boolean; metadata?: ContextPartMetadata; systemContext?: 'session-knowledge' }>,
-    variant?: string,
+    /** `null` is an explicit `Default` thinking level. */
+    variant?: string | null,
     inputMode?: "normal" | "shell",
     options?: SendMessageOptions,
   ) => Promise<void>
@@ -988,7 +987,7 @@ const resolveVariantToRecord = (
   agentName: string | undefined,
   providerID: string,
   modelID: string,
-  sentVariant: string | undefined,
+  sentVariant: string | null | undefined,
 ): string | null | undefined => {
   const config = useConfigStore.getState()
   const describesThisSend = config.currentProviderId === providerID
@@ -1001,7 +1000,8 @@ export async function materializeOpenDraftSession(selection: {
   providerID: string
   modelID: string
   agent?: string
-  variant?: string
+  /** `null` is an explicit `Default` thinking level. */
+  variant?: string | null
 }, draftOverride?: NewSessionDraftState): Promise<MaterializedDraftSession | null> {
   const store = useSessionUIStore.getState()
   const draft = draftOverride ?? store.newSessionDraft
@@ -1166,7 +1166,6 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
   abortControllers: new Map(),
   isLoading: false,
   lastLoadedDirectory: null,
-  sessionPlanAvailable: new Map(),
 
   // ---------------------------------------------------------------------------
   // setCurrentSession
@@ -1773,7 +1772,8 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
     attachments?: AttachedFile[],
     agentMentionName?: string,
     additionalParts?: Array<{ text: string; attachments?: AttachedFile[]; synthetic?: boolean; metadata?: ContextPartMetadata; systemContext?: 'session-knowledge' }>,
-    variant?: string,
+    /** `null` is an explicit `Default` thinking level. */
+    variant?: string | null,
     inputMode?: "normal" | "shell",
     options?: SendMessageOptions,
   ) => {
@@ -1913,6 +1913,9 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
 
       // ---- Existing session ----
       const targetSessionId = capturedTarget?.sessionId ?? options?.sessionId ?? get().currentSessionId
+      const resumeAfterSend = options?.userInitiated && inputMode !== 'shell' && targetSessionId
+        ? prepareUserMessageResume(targetSessionId, capturedRuntimeKey)
+        : undefined
       const sessionAgentSelection = targetSessionId
         ? useSelectionStore.getState().getSessionAgentSelection(targetSessionId)
         : null
@@ -2024,6 +2027,8 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
       if (knowledge?.text) {
         void reportSessionKnowledgeDelivered(currentSessionDirectory, targetSessionId || "", knowledge.signature)
       }
+      // Keep restore failures outside the send promise and its retry path.
+      void resumeAfterSend?.().catch(console.warn)
     })
   },
 
@@ -2379,24 +2384,6 @@ export const useSessionUIStore = create<SessionUIState>()((set, get) => ({
       setActiveSession(normalized ?? "", sessionId)
       writeRuntimeSessionMemory(runtimeMemoryKey(), { sessionId, directory: normalized })
     }
-  },
-
-  // ---------------------------------------------------------------------------
-  // Plan mode availability tracking
-  // ---------------------------------------------------------------------------
-  markSessionPlanAvailable: (sessionId) => {
-    set((state) => {
-      if (state.sessionPlanAvailable.get(sessionId) === true) {
-        return state
-      }
-      const next = new Map(state.sessionPlanAvailable)
-      next.set(sessionId, true)
-      return { sessionPlanAvailable: next }
-    })
-  },
-
-  isSessionPlanAvailable: (sessionId) => {
-    return get().sessionPlanAvailable.get(sessionId) ?? false
   },
 }))
 

@@ -84,6 +84,7 @@ import { createBootstrapRuntime } from './lib/opencode/bootstrap-runtime.js';
 import { createSessionRuntime } from './lib/opencode/session-runtime.js';
 import { configureOpenCodeRuntimeProviders, resetOpenCodeRuntimeProviders } from './lib/small-model/client.js';
 import { configureOpenCodeCredentials, openCodeCredentialSource } from './lib/opencode/auth.js';
+import { configureProjectStartCommandSource, openCodeProjectStartCommandSource } from './lib/opencode/project-start-command.js';
 import { createOpenCodeWatcherRuntime } from './lib/opencode/watcher.js';
 import { createSessionAssistRuntime } from './lib/session-assist/runtime.js';
 import { createSessionGoalRuntime } from './lib/session-goal/runtime.js';
@@ -113,6 +114,7 @@ import { createSessionWorkRuntime } from './lib/session-work/runtime.js';
 import { createSessionLineage } from './lib/session-lineage.js';
 import { createGracefulShutdownRuntime } from './lib/opencode/shutdown-runtime.js';
 import { beginGuestServiceHost, beginGuestServiceShutdown, stopAllGuestServices } from './lib/guests/service.js';
+import { guestServiceRegistryDir } from './lib/guests/service-registry.js';
 import { findInstalledGuest } from './lib/guests/catalog.js';
 import { extensionsPersistPath } from './lib/guests/persist.js';
 import { createGuestSurfaceRuntime } from './lib/guests/surface.js';
@@ -127,6 +129,7 @@ import { isAgentMemoryFeatureAvailable } from './lib/agent-memory/feature-flag.j
 import { createSpacesHost } from './lib/spaces/host.js';
 import { createSpaceArchive } from './lib/spaces/space-archive.js';
 import { readIdleStopSetting, startIdleStop } from './lib/spaces/idle-stop.js';
+import { dockerHostOf } from './lib/spaces/places/ssh-host.js';
 import { SPACE_IDLE_EXIT_CODE } from './lib/spaces/layout.js';
 import { createSwitchController, registerSpaceRoutes } from './lib/spaces/routes.js';
 import { configureGitEnvironment, resolvePrimaryWorktreeRoot } from './lib/git/service.js';
@@ -273,10 +276,6 @@ const shouldSkipApiCompression = () => {
 };
 
 const OPENCHAMBER_VERBOSE_REQUEST_LOGS = isEnvFlagEnabled(process.env.OPENCHAMBER_VERBOSE_REQUEST_LOGS);
-
-const PLAN_MODE_EXPERIMENT_ENABLED =
-  isEnvFlagEnabled(process.env.OPENCODE_EXPERIMENTAL_PLAN_MODE)
-  || isEnvFlagEnabled(process.env.OPENCODE_EXPERIMENTAL);
 
 const fsPromises = fs.promises;
 
@@ -445,6 +444,7 @@ const settingsRuntime = createSettingsRuntime({
   normalizeManagedRemoteTunnelPresetTokens,
   syncManagedRemoteTunnelConfigWithPresets,
   upsertManagedRemoteTunnelToken,
+  chatRoots: [path.join(OPENCHAMBER_USER_CONFIG_ROOT, 'chats'), OPENCHAMBER_CHATS_DIR],
   onManagedPluginSettingsChanged: () => managedConfigRuntime?.refreshManagedConfigFile(),
   // Declared further down; settings are only saved once the server serves requests.
   onMessageSearchEnabledChanged: (enabled) => messageSearchRuntime.setEnabled(enabled),
@@ -1524,6 +1524,8 @@ configureOpenCodeCredentials(openCodeCredentialSource({
   getLaunchEnvironment: () => openCodeLifecycleRuntime.getManagedOpenCodeProcessEnv(),
   getDefaultDirectory: () => openCodeLifecycleRuntime.getDefaultOpenCodeDirectory(),
 }));
+// A new worktree runs the start command OpenCode keeps on the project record.
+configureProjectStartCommandSource(openCodeProjectStartCommandSource({ buildOpenCodeUrl, getOpenCodeAuthHeaders }));
 
 const getOpenCodeCompatibility = async () => {
   if (isExternalOpenCode || ENV_SKIP_OPENCODE_START) {
@@ -1779,6 +1781,30 @@ const openChamberControlService = createOpenChamberControlService({
   scheduledTaskService,
   browserControl: browserControlRouter,
   fileOpen: fileOpenRequester,
+  projectContextRuntime,
+  // The resolver session knowledge reads pinned notes and plans through, so
+  // what an agent writes is what the next session is given.
+  resolveProjectContextId: resolveMemoryProjectId,
+  // On by default; a plugin generated before it was switched off must not
+  // keep writing.
+  // Like file.open: every connected window hears it, the ones showing that
+  // project open the plan.
+  showPlan: (request) => {
+    let delivered = 0;
+    for (const client of uiOpenChamberEventClients) {
+      try {
+        writeSseEvent(client, { type: 'openchamber:plan-open-request', properties: request });
+        delivered += 1;
+      } catch {
+        uiOpenChamberEventClients.delete(client);
+      }
+    }
+    return delivered;
+  },
+  isKnowledgeToolEnabled: async () => {
+    const settings = await readSettingsFromDiskMigrated().catch(() => null);
+    return settings?.agentKnowledgeToolEnabled !== false;
+  },
   // The tool is off by default; a plugin generated before it was switched off
   // must not keep paging the user.
   notifyUser: async (input) => {
@@ -1897,7 +1923,7 @@ const gracefulShutdownRuntime = createGracefulShutdownRuntime({
 const gracefulShutdown = (...args) => gracefulShutdownRuntime.gracefulShutdown(...args);
 
 async function main(options = {}) {
-  beginGuestServiceHost();
+  beginGuestServiceHost({ registryDir: guestServiceRegistryDir(OPENCHAMBER_DATA_DIR) });
   // Again at start: the desktop shell merges the login shell's environment,
   // where proxy variables often live, after this module first loaded.
   applyOutboundProxyFromEnv();
@@ -2100,9 +2126,11 @@ async function main(options = {}) {
 
   // The isolated-spaces switch, read here at start and changed live through its route below.
   // While it is off the feature has no place, no manager, no route and runs no `docker`.
-  const buildSpacesHost = () => createSpacesHost({
+  const buildSpacesHost = async () => createSpacesHost({
     dataDir: OPENCHAMBER_DATA_DIR,
     dockerPath: searchPathFor('docker', buildAugmentedPath()) ?? 'docker',
+    // The machine of the Docker over SSH place, when the settings name one.
+    sshDockerHost: dockerHostOf((await readSettingsFromDiskMigrated().catch(() => null))?.isolatedSpacesSshHost),
     // Only for a clean-up of the spaces' disk on Colima, to give the freed space back; null without it.
     colimaPath: searchPathFor('colima', buildAugmentedPath()),
     gitPath: searchPathFor('git', buildAugmentedPath()) ?? 'git',
@@ -2122,7 +2150,7 @@ async function main(options = {}) {
   const startupSettings = await readSettingsFromDiskMigrated().catch(() => null);
   if (startupSettings?.isolatedSpacesEnabled === true) {
     try {
-      spacesHost = buildSpacesHost();
+      spacesHost = await buildSpacesHost();
     } catch (error) {
       // The feature is absent then, and the rest of the server starts as with the switch off.
       console.error(`[spaces] isolated spaces are unavailable this start: ${error?.code ?? ''} ${error?.message ?? error}`.trim());
@@ -2180,7 +2208,7 @@ async function main(options = {}) {
       // The packaged desktop UI (openchamber-ui://) and the dev UI sit on a
       // different origin, so every custom request header must be listed here or
       // the browser refuses the request at preflight, before it reaches a route.
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,Accept,X-Requested-With,Cache-Control,X-OpenCode-Directory,X-OpenCode-Directory-Encoding,Ngrok-Skip-Browser-Warning,X-OpenChamber-Surface,X-OpenChamber-Provider,X-OpenChamber-Model');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,Accept,X-Requested-With,Cache-Control,X-OpenCode-Directory,X-OpenCode-Directory-Encoding,Ngrok-Skip-Browser-Warning,X-OpenChamber-Surface,X-OpenChamber-Provider,X-OpenChamber-Model,X-OpenChamber-Part-Shells');
       res.setHeader('Access-Control-Expose-Headers', 'x-next-cursor');
       res.setHeader('Vary', 'Origin');
       if (req.method === 'OPTIONS') {
@@ -2246,7 +2274,6 @@ async function main(options = {}) {
         nodeBinaryResolved: resolvedNodeBinary || null,
         bunBinaryResolved: resolvedBunBinary || null,
         desktopNotifyEnabled: ENV_DESKTOP_NOTIFY,
-        planModeExperimentalEnabled: PLAN_MODE_EXPERIMENT_ENABLED,
         apiOnly,
       };
     },
@@ -2348,12 +2375,14 @@ async function main(options = {}) {
     buildHost: buildSpacesHost,
     startHost: startSpacesHost,
     persist: (enabled) => persistSettings({ isolatedSpacesEnabled: enabled }),
+    persistMachine: (machine) => persistSettings({ isolatedSpacesSshHost: machine }),
   });
   registerSpaceRoutes(app, {
     getJourney: () => spacesHost?.journey ?? null,
     getPlaces: () => spacesHost?.places() ?? [],
     readSwitch: spacesSwitch.readSwitch,
     setSwitch: spacesSwitch.setSwitch,
+    setMachine: spacesSwitch.setMachine,
     getArchive: () => spaceArchive,
   });
   realtimeProxyRuntime = attachRealtimeProxy({

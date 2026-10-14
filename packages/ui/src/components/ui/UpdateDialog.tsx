@@ -141,6 +141,8 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
     : 0;
 
   const isWebRuntime = runtimeType === 'web';
+  // A desktop host installed from a Linux package asks for the password on its own screen.
+  const desktopHostInstall = isWebRuntime && info?.installBlocked === 'desktop-host';
   const isMobileRuntime = runtimeType === 'mobile';
   const updateCommand = info?.updateCommand || 'openchamber update';
 
@@ -337,8 +339,8 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
             </div>
           )}
 
-          {/* Web runtime fallback command */}
-          {isWebRuntime && info?.packageManager !== 'electron' && webUpdateState === 'error' && (
+          {/* Web runtime fallback command; it would not update a copy no package manager installed */}
+          {isWebRuntime && info?.packageManager !== 'electron' && info?.installBlocked !== 'manual-install' && webUpdateState === 'error' && (
             <div className="space-y-2 mt-4">
               <div className="flex items-center gap-2 typography-meta text-muted-foreground">
                 <Icon name="terminal" className="h-4 w-4" />
@@ -385,6 +387,12 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
           )}
 
           {/* Error display */}
+          {desktopHostInstall && (
+            <p className="mt-4 typography-meta text-muted-foreground">
+              {t('updateDialog.desktopHostInstall', { version: info?.version || '' })}
+            </p>
+          )}
+
           {(error || webError) && (
             <div className="p-3 mt-4 bg-[var(--status-error-background)] border border-[var(--status-error-border)] rounded-lg">
               <p className="text-sm text-[var(--status-error)]">{error || webError}</p>
@@ -457,7 +465,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
               </Button>
             )}
 
-            {isWebRuntime && !isWebUpdating && (
+            {isWebRuntime && !isWebUpdating && !desktopHostInstall && (
               <button
                 onClick={handleWebUpdate}
                 className="flex items-center justify-center gap-2 px-5 py-2 rounded-md text-sm font-medium bg-[var(--primary-base)] text-[var(--primary-foreground)] hover:opacity-90 transition-opacity"

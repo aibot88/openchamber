@@ -134,8 +134,8 @@ describe('OpenCode Go quota provider (VS Code parity)', () => {
     const result = await fetchQuotaForProvider('opencode-go');
 
     assert.equal(result.ok, true);
-    assert.equal((request?.headers as Record<string, string>).Authorization, 'Bearer test-token');
-    assert.equal((request?.headers as Record<string, string>)['x-opencode-session'], 'openchamber-usage');
+    assert.equal((request?.headers as Record<string, string> | undefined)?.Authorization, 'Bearer test-token');
+    assert.equal((request?.headers as Record<string, string> | undefined)?.['x-opencode-session'], 'openchamber-usage');
     assert.equal(result.usage!.windows['5h']!.usedPercent, 25);
     assert.throws(() => fs.statSync(legacyPath));
   });
@@ -205,14 +205,38 @@ describe('OpenCode Go quota provider — Console OAuth (VS Code parity)', () => 
     const result = await fetchQuotaForProvider('opencode-go');
 
     assert.equal(requestedUrl, 'https://opencode.ai/console/api/go/status');
-    assert.equal((request?.headers as Record<string, string>).Authorization, 'Bearer console-token');
-    assert.equal((request?.headers as Record<string, string>)['x-org-id'], 'org_TESTORG123');
+    assert.equal((request?.headers as Record<string, string> | undefined)?.Authorization, 'Bearer console-token');
+    assert.equal((request?.headers as Record<string, string> | undefined)?.['x-org-id'], 'org_TESTORG123');
     assert.equal(result.ok, true);
     assert.equal(result.usage!.windows['5h']!.usedPercent, 25);
     assert.equal(result.usage!.windows.weekly!.usedPercent, 40);
     assert.equal(result.usage!.windows.monthly!.usedPercent, 50);
     assert.equal(result.usage!.windows.credits_balance!.valueLabel, '$12.00');
     assert.equal(result.usage!.windows.credits_balance!.usedPercent, null);
+  });
+
+  test('accepts a wrk_ workspace id from the Console sign-in', async () => {
+    const orgID = 'wrk_01JBW7QK3E8V2Y5M9R4T6A8C0D';
+    configureOpenCodeCredentials({ list: async () => [consoleOAuth({ orgID })] });
+    let request: RequestInit | undefined;
+    // SAFETY: the stub answers the same two Console URLs fetch is given here.
+    globalThis.fetch = (async (url: string, init?: RequestInit) => {
+      if (url === 'https://opencode.ai/console/api/billing/status') {
+        return mockResponse({ availableMicroCents: '12000000' });
+      }
+      request = init;
+      return mockResponse({
+        product: 'go',
+        access: { meters: {
+          fiveHour: { resetsAt: '2026-08-12T12:00:00.000Z', limitMicroCents: '1000000000', usedMicroCents: '250000000' },
+        } },
+      });
+    }) as typeof fetch;
+
+    const result = await fetchQuotaForProvider('opencode-go');
+
+    assert.equal(new Headers(request?.headers).get('x-org-id'), orgID);
+    assert.equal(result.ok, true);
   });
 
   test('keeps the meters when the billing balance cannot be read', async () => {
@@ -739,6 +763,20 @@ describe('Codex quota provider (VS Code parity)', () => {
       assert.equal(result.usage.windows.credits_balance.usedPercent, null);
     });
   }
+
+  test('tells an access-enforcement 401 apart from an expired session', async () => {
+    globalThis.fetch = async () => Response.json(
+      { error: { type: 'rejected_by_access_enforcement', code: 'no_matching_rule' } },
+      { status: 401 },
+    );
+    const refused = await fetchQuotaForProvider('codex');
+    assert.equal(refused.ok, false);
+    assert.equal(refused.error, 'Usage is not available for this OpenAI sign-in method; chat still works');
+
+    globalThis.fetch = async () => new Response('unauthorized', { status: 401 });
+    const expired = await fetchQuotaForProvider('codex');
+    assert.equal(expired.error, 'Session expired \u2014 please re-authenticate with OpenAI');
+  });
 
   test('omits the balance window when credits are absent', async () => {
     globalThis.fetch = async () => Response.json({ rate_limit: null });

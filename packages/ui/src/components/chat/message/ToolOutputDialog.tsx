@@ -22,6 +22,7 @@ import {
 } from './toolRenderers';
 import type { ToolPopupContent, DiffViewMode } from './types';
 import { DiffViewToggle } from './DiffViewToggle';
+import { useDefaultDiffViewMode } from './useDefaultDiffViewMode';
 import { VirtualizedCodeBlock, type CodeLine } from './parts/VirtualizedCodeBlock';
 import { JsonTreeView } from '@/components/ui/JsonTreeView';
 import { Icon } from "@/components/icon/Icon";
@@ -30,6 +31,7 @@ import { useGuestToolPresentation } from '@/lib/guests/tool-presentation';
 import { useI18n, type I18nKey, type I18nParams } from '@/lib/i18n';
 import { runtimeFetch } from '@/lib/runtime-fetch';
 import { MermaidLoadFailure, getMermaidDataUrlSourcePromise, isCurrentMermaidLoadRequest, isMermaidLoadFailure, nextMermaidLoadRequestId } from './toolOutputDialogMermaid';
+import { PIERRE_DIFF_TINT_CSS } from '@/lib/shiki/pierreDiffTint';
 
 interface ToolOutputDialogProps {
     popup: ToolPopupContent;
@@ -54,6 +56,7 @@ type PierreThemeConfig = {
 };
 
 const TOOL_DIFF_UNSAFE_CSS = `
+  ${PIERRE_DIFF_TINT_CSS}
   [data-diff-header],
   [data-diff] {
     [data-separator] {
@@ -937,15 +940,16 @@ const MermaidPreviewDialog: React.FC<{
 
 const ToolOutputDialog: React.FC<ToolOutputDialogProps> = ({ popup, onOpenChange, isMobile }) => {
     const { t } = useI18n();
-    const [diffViewMode, setDiffViewMode] = React.useState<DiffViewMode>('unified');
+    const defaultDiffViewMode = useDefaultDiffViewMode();
+    const [diffViewMode, setDiffViewMode] = React.useState<DiffViewMode>(defaultDiffViewMode);
     const pierreThemeConfig = usePierreThemeConfig();
     const popupToolName = typeof popup.metadata?.tool === 'string' ? popup.metadata.tool : null;
     const popupToolPresentation = useGuestToolPresentation(popupToolName);
 
     React.useEffect(() => {
         if (!popup.open) return;
-        setDiffViewMode('unified');
-    }, [popup.open, popup.title]);
+        setDiffViewMode(defaultDiffViewMode);
+    }, [defaultDiffViewMode, popup.open, popup.title]);
 
     if (popup.image) {
         return <ImagePreviewDialog popup={popup} onOpenChange={onOpenChange} isMobile={isMobile} />;

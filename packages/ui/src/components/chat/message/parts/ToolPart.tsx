@@ -42,12 +42,14 @@ import { JsonTreeViewer } from '@/components/ui/JsonTreeViewer';
 import { JsonSummaryView } from './JsonSummaryView';
 import { Icon } from "@/components/icon/Icon";
 import { DiffViewToggle, type DiffViewMode } from '../DiffViewToggle';
+import { useDefaultDiffViewMode } from '../useDefaultDiffViewMode';
 import { MinDurationShineText } from './MinDurationShineText';
 import { getToolIcon } from './toolPresentation';
 import { GuestToolTable } from './GuestToolTable';
 import type { JsonValue } from '@openchamber/sdk';
 import {
     guestToolTableRows,
+    guestToolHeaderReadsOutput,
     renderGuestToolHeader,
     useGuestToolPresentation,
     type GuestToolRule,
@@ -106,6 +108,7 @@ import { toBackgroundSubagentPart, toStoppedSubagentPart, type BackgroundSubagen
 import { findSubagentCancellation, findSubagentRun, readBackgroundSubagentChildID } from '@/lib/opencode/subagent-run';
 import { useGlobalSessionStatusStore } from '@/sync/global-session-status';
 import { useBackgroundShellOutput } from './useBackgroundShellOutput';
+import { useToolContentCompletion } from './useToolContentCompletion';
 
 type ToolJsonViewMode = 'summary' | 'formatted' | 'raw';
 
@@ -1065,7 +1068,8 @@ const ToolExpandedContent: React.FC<ToolExpandedContentProps> = React.memo(({
     const { t } = useI18n();
     const runtime = React.useContext(RuntimeAPIContext);
     const mobileActions = useMobileAppActions();
-    const [diffViewMode, setDiffViewMode] = React.useState<DiffViewMode>('unified');
+    const defaultDiffViewMode = useDefaultDiffViewMode();
+    const [diffViewMode, setDiffViewMode] = React.useState<DiffViewMode>(defaultDiffViewMode);
     const stateWithData = state as ToolStateWithMetadata;
     const metadata = stateWithData.metadata;
     const input = stateWithData.input;
@@ -1091,6 +1095,7 @@ const ToolExpandedContent: React.FC<ToolExpandedContentProps> = React.memo(({
     const hideToolInputPreview = part.tool === 'openchamber'
         || part.tool === 'openchamber_web'
         || part.tool === 'openchamber_memory'
+        || part.tool === 'openchamber_knowledge'
         || part.tool === 'openchamber_notify'
         || isPatchTool(part.tool)
         || isEditTool(part.tool)
@@ -1144,8 +1149,8 @@ const ToolExpandedContent: React.FC<ToolExpandedContentProps> = React.memo(({
     }, [hasInputText, input?.filePath, input?.file_path, input?.path, inputTextContent, isWriteLikeTool]);
 
     React.useEffect(() => {
-        setDiffViewMode('unified');
-    }, [part.id]);
+        setDiffViewMode(defaultDiffViewMode);
+    }, [defaultDiffViewMode, part.id]);
 
     const renderScrollableBlock = (
         content: React.ReactNode,
@@ -1707,7 +1712,7 @@ const ToolPartContent: React.FC<ToolPartProps & { header?: ToolRowHeader; subage
     const writeLineCount = React.useMemo(() => {
         return isWriteTool(normalizedPartTool) ? parseWriteLineCount(input) : null;
     }, [input, normalizedPartTool]);
-    const isMultiFileApplyPatch = isPatchTool(normalizedPartTool) && Array.isArray(metadata?.files) && (metadata?.files as []).length > 1;
+    const isMultiFileApplyPatch = isPatchTool(normalizedPartTool) && Array.isArray(metadata?.files) && metadata.files.length > 1;
     const normalizedPart = normalizedPartTool !== part.tool ? ({ ...part, tool: normalizedPartTool } as ToolPartType) : part;
     const descriptionPath = getToolDescriptionPath(normalizedPart, state, currentDirectory);
     const builtInDescription = getToolDescription(normalizedPart, state, currentDirectory, t);
@@ -1863,6 +1868,10 @@ const ToolPartContent: React.FC<ToolPartProps & { header?: ToolRowHeader; subage
     const iconStyle = isError ? TOOL_ERROR_ICON_STYLE : TOOL_NORMAL_ICON_STYLE;
     const titleStyle = isError ? TOOL_ERROR_TITLE_STYLE : TOOL_NORMAL_TITLE_STYLE;
     const shouldRenderExpandedContent = useDeferredExpandedContent(isExpanded);
+    const contentCompletion = useToolContentCompletion(
+        part,
+        shouldRenderExpandedContent || (presentation !== null && guestToolHeaderReadsOutput(presentation)),
+    );
     // Shell and subagent rows carry their duration: live while they run, final once settled.
     const showsDuration = isShellTool(normalizedPartTool) || isTaskTool;
 
@@ -2077,14 +2086,29 @@ const ToolPartContent: React.FC<ToolPartProps & { header?: ToolRowHeader; subage
                         className="relative ms-2 ps-3"
                     >
                         <BlockLine onToggle={() => onToggle(part.id)} topOffset={1} />
-                        <ToolExpandedContent
-                            part={part}
-                            state={state}
-                            currentDirectory={currentDirectory}
-                            isExpanded={isExpanded}
-                            onShowPopup={onShowPopup}
-                            presentation={presentation}
-                        />
+                        {contentCompletion.status === 'whole' ? (
+                            <ToolExpandedContent
+                                part={part}
+                                state={state}
+                                currentDirectory={currentDirectory}
+                                isExpanded={isExpanded}
+                                onShowPopup={onShowPopup}
+                                presentation={presentation}
+                            />
+                        ) : contentCompletion.status === 'loading' ? (
+                            contentCompletion.showProgress ? (
+                                <div className="typography-meta py-1 text-muted-foreground">
+                                    {t('chat.toolPart.content.loading')}
+                                </div>
+                            ) : null
+                        ) : (
+                            <div className="typography-meta flex items-center gap-2 py-1 text-muted-foreground">
+                                <span>{t('chat.toolPart.content.loadFailed')}</span>
+                                <Button variant="ghost" size="xs" onClick={contentCompletion.retry}>
+                                    {t('chat.toolPart.content.retry')}
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 ) : null}
             </div>
@@ -2167,12 +2191,10 @@ const BackgroundShellToolPartContent: React.FC<ToolPartProps & { shellID: string
     const stop = React.useCallback(() => {
         if (!running) return;
         setStopping(true);
-        opencodeClient.stopBackgroundShell({
+        opencodeClient.stopBackgroundShells({
             sessionID: props.part.sessionID,
             sessionDirectory: directory,
-            shellID,
-            shellDirectory: running.directory,
-            command: running.command,
+            shells: [{ shellID, shellDirectory: running.directory, command: running.command }],
         }).catch(() => {
             setStopping(false);
             toast.error(t('chat.toolPart.background.stopFailed'));

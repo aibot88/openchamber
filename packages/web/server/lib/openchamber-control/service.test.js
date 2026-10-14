@@ -263,6 +263,48 @@ describe('OpenChamber control service', () => {
     expect(moveToWorktree).toHaveBeenCalledTimes(1);
   });
 
+  it('finds the target session directory on a later session.list page', async () => {
+    const { service, client } = createService();
+    client.session.list
+      .mockResolvedValueOnce({ data: [{ id: 'ses_early', location: { directory: '/repo' } }], cursor: { next: 'page-2' } })
+      .mockResolvedValueOnce({ data: [{ id: 'ses_target', location: { directory: '/repo/worktrees/target' } }], cursor: { next: null } });
+
+    await expect(service.resolveSessionDirectory('ses_target')).resolves.toBe('/repo/worktrees/target');
+    expect(client.session.list).toHaveBeenNthCalledWith(2, { cursor: 'page-2' });
+    expect(client.session.list).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps paging session.list until the requested limit is satisfied', async () => {
+    const { service, client } = createService();
+    client.session.list
+      .mockResolvedValueOnce({ data: [{ id: 'ses_1', location: { directory: '/repo' }, time: {} }], cursor: { next: 'page-2' } })
+      .mockResolvedValueOnce({ data: [{ id: 'ses_2', location: { directory: '/other' }, time: {} }], cursor: { next: null } });
+
+    await expect(service.execute('session.list', { limit: 2 })).resolves.toEqual({
+      sessions: [
+        { id: 'ses_1', location: { directory: '/repo' }, time: {} },
+        { id: 'ses_2', location: { directory: '/other' }, time: {} },
+      ],
+      limit: 2,
+      directory: null,
+      archived: 'excluded',
+    });
+    expect(client.session.list).toHaveBeenNthCalledWith(2, { cursor: 'page-2' });
+  });
+
+  it('stops paging the session list when a cursor repeats', async () => {
+    const { service, client } = createService();
+    client.session.list.mockResolvedValue({
+      data: [{ id: 'ses_1', location: { directory: '/repo' }, time: {} }],
+      cursor: { next: 'loop' },
+    });
+
+    const { sessions } = await service.execute('session.list', { limit: 10 });
+
+    expect(sessions).toEqual([{ id: 'ses_1', location: { directory: '/repo' }, time: {} }]);
+    expect(client.session.list).toHaveBeenCalledTimes(2);
+  });
+
   it('falls back to the context directory when the session is not in the global list', async () => {
     const { service, sessionService } = createService();
     sessionService.send.mockResolvedValue({ sessionId: 'ses_unknown', directory: '/repo', promptDispatched: true });
@@ -705,5 +747,28 @@ describe('returning a dispatched session result', () => {
     await expect(service.execute('session.create', { prompt: 'x', returnResult: true }, '/repo', { contextSessionId: 'ses_parent' }))
       .rejects.toMatchObject({ statusCode: 503 });
     expect(sessionService.create).not.toHaveBeenCalled();
+  });
+
+  it('refuses a returnResult that is not a boolean instead of silently skipping delivery', async () => {
+    const { service, sessionService, dispatchResults } = createReturningService();
+    await expect(service.execute('session.create', { prompt: 'x', returnResult: 'true' }, '/repo', { contextSessionId: 'ses_parent' }))
+      .rejects.toMatchObject({ statusCode: 400, message: expect.stringContaining('returnResult must be a boolean') });
+    expect(sessionService.create).not.toHaveBeenCalled();
+    expect(dispatchResults.register).not.toHaveBeenCalled();
+  });
+
+  it('accepts an explicit false returnResult as the plain dispatch path', async () => {
+    const { service, sessionService, dispatchResults } = createReturningService();
+    const result = await service.execute('session.create', { prompt: 'x', returnResult: false }, '/repo', { contextSessionId: 'ses_parent' });
+    expect(sessionService.create).toHaveBeenCalled();
+    expect(result).not.toHaveProperty('resultDelivery');
+    expect(dispatchResults.register).not.toHaveBeenCalled();
+  });
+
+  it('refuses a wait that is not a boolean', async () => {
+    const { service, sessionService } = createService();
+    await expect(service.execute('session.send', { sessionId: 'ses_1', prompt: 'x', wait: 'true' }, '/repo'))
+      .rejects.toMatchObject({ statusCode: 400, message: expect.stringContaining('wait must be a boolean') });
+    expect(sessionService.send).not.toHaveBeenCalled();
   });
 });

@@ -12,7 +12,7 @@ import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } 
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Icon } from '@/components/icon/Icon';
 import { cn, getRevealLabelKey } from '@/lib/utils';
-import { PROJECT_COLOR_MAP, PROJECT_ICON_MAP, ProjectIconImage } from '@/lib/projectMeta';
+import { PROJECT_ICON_MAP, resolveProjectColor, ProjectIconImage } from '@/lib/projectMeta';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
 import { useI18n } from '@/lib/i18n';
 import { CrossfadeZoneHeader } from './CrossfadeZoneHeaders';
@@ -53,7 +53,7 @@ const ProjectHeaderIdentity: React.FC<ProjectHeaderIdentityProps> = ({
 }) => {
   const { currentTheme } = useThemeSystem();
   const projectIconName = projectIcon ? PROJECT_ICON_MAP[projectIcon] : null;
-  const iconColor = projectColor ? (PROJECT_COLOR_MAP[projectColor] ?? null) : null;
+  const iconColor = resolveProjectColor(projectColor);
   const hasCollapseControl = isCollapsed !== undefined;
   // The project icon cross-fades into the collapse chevron on hover.
   const iconVisibilityClassName = hasCollapseControl
@@ -100,7 +100,9 @@ const ProjectHeaderIdentity: React.FC<ProjectHeaderIdentityProps> = ({
           <Icon name="folder" className={cn('h-3.5 w-3.5 text-muted-foreground/80', iconVisibilityClassName)} style={iconColor ? { color: iconColor } : undefined} />
         )}
       </span>
-      <span className={cn('truncate typography-ui-label font-semibold text-foreground', labelClassName)}>{projectLabel}</span>
+      {/* One size up from rows: projects and zones are the top level of the
+          tree, above semibold-free worktree and folder headers. */}
+      <span className={cn('truncate typography-ui-header font-semibold text-foreground', labelClassName)}>{projectLabel}</span>
     </>
   );
 };
@@ -422,7 +424,7 @@ export const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                         )}
                         aria-label={t('sessions.sidebar.project.actions.newWorktree')}
                       >
-                        <Icon name="node-tree" className="h-4 w-4" />
+                        <Icon name="node-tree" className="h-3.5 w-3.5" />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" sideOffset={4}>
@@ -452,7 +454,7 @@ export const SortableProjectItem: React.FC<SortableProjectItemProps> = ({
                         onMouseDown={handleMenuTriggerMouseDown}
                         onClick={handleMenuTriggerClick}
                       >
-                        <Icon name="more-2" className="h-3.5 w-3.5" />
+                        <Icon name="more-2" className="h-3 w-3" />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="min-w-[180px]">

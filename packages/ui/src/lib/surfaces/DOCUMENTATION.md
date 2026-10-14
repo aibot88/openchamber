@@ -45,12 +45,16 @@ Full-screen extension pages are separate from this rail registry. `contributes.p
 - Rail order is user-reorderable and persisted globally in
   `useUIStore.contextRailOrder`; `sortContextSurfaces` applies it on top of the
   registry's default order and appends any missing surfaces.
+  `ContextRailSurfacesDialog` edits this same order with drag handles beside
+  the visibility checkboxes, including hidden panels. Mouse, touch and keyboard
+  drops update the rail immediately; visibility changes and "Show all" preserve
+  the order. Dialog reorders retain saved ids of unavailable extensions at the
+  end of the preference. Escape cancels a drag before closing the dialog.
 - `getVisibleContextRailSurfaces` is the single visibility filter shared by the
   rail and the global surface-switch shortcut (`switch_context_surface` in
   `lib/shortcuts`): it drops surfaces the user hid
   (`useUIStore.contextRailHiddenSurfaces`, edited from the rail's trailing
-  configure button — `ContextRailSurfacesDialog`), drops the plan surface
-  unless plan mode is enabled,
+  configure button — `ContextRailSurfacesDialog`),
   drops the walkthrough on VS Code and below `WALKTHROUGH_MIN_WIDTH`, hides the pull-request surface
   unless GitHub is connected (OAuth or `gh` CLI — signed in from Settings →
   Integrations), and hides `has-content` surfaces
@@ -113,7 +117,7 @@ keep the full height). The chat is always the centre and cannot move.
 ## Panel header
 
 The panel has one header row. A single-instance surface with its own toolbar
-(terminal, diff, walkthrough, plan, git's branch and sync controls, the notes
+(terminal, diff, walkthrough, git's branch and sync controls, the notes
 search, the context surface's session title) renders that toolbar through
 `ContextPanelHeaderToolbar` (`components/layout/contextPanelHeaderSlot.tsx`)
 instead of stacking a second row under the header: the toolbar replaces the
@@ -142,7 +146,7 @@ chat/palette go through the `openContext*` actions in `useUIStore`.
   positions). Chat tab records stay open, but only the active chat tab's
   pinned chat column is mounted while the panel is open. A selected chat
   restores its state from the session stores. A closed panel mounts no chat.
-  Singleton surfaces (git, pr, notes, plan, context) remount on switch. These
+  Singleton surfaces (git, pr, notes, context) remount on switch. These
   surfaces must restore their state from stores or snapshots.
 - Portalled menus and dialogs handle their own Escape key. The panel's capture
   handler ignores their events so dismissing an overlay does not close the panel.
