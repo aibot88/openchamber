@@ -4,6 +4,11 @@ import { linearIntegrationI18n } from './linear-integration.i18n';
 import { thirdPartyIntegrationI18n } from './third-party-integrations.i18n';
 import { extensionCatalogI18n } from './extension-catalog.i18n';
 export const settingsDict = {
+  'settings.providers.page.auth.command.accountName': '帳號名稱（選填）',
+  'settings.providers.page.auth.command.devinHint': '在 OpenCode 主機上登入 Devin Desktop，連線前結束桌面應用程式。新增其他帳號時，在桌面應用程式中切換登入，再次連線。之後可在已儲存的帳號清單中按「使用」切換帳號。',
+  'settings.providers.page.auth.command.waiting': '正在 OpenCode 主機上登入…',
+  'settings.providers.page.toast.commandConnected': '模型供應商已連線',
+  'settings.providers.page.toast.commandConnectFailed': '無法在 OpenCode 主機上登入，請重新連線。',
   'settings.sourceControl.ssh.title': 'SSH 金鑰',
   'settings.sourceControl.ssh.load': '顯示金鑰',
   'settings.sourceControl.ssh.discover': '在 ~/.ssh 中尋找金鑰',
@@ -1603,6 +1608,8 @@ export const settingsDict = {
   'settings.providers.page.models.capability.reasoning': '推理',
   'settings.providers.page.models.capability.imageInput': '影像輸入',
   'settings.providers.page.models.tokenBadge.context': '上下文',
+  'settings.providers.page.models.tokenBadge.unknownContext': '上下文未知',
+  'settings.providers.page.models.tokenBadge.unknownOutput': '輸出未知',
   'settings.providers.page.models.tokenBadge.output': '輸出',
   'settings.providers.page.models.actions.hideModelFromSelectors': '在選擇器中隱藏模型',
   'settings.providers.page.models.actions.showModelInSelectors': '在選擇器中顯示模型',

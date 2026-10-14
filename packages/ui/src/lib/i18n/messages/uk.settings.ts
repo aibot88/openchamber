@@ -4,6 +4,11 @@ import { linearIntegrationI18n } from './linear-integration.i18n';
 import { thirdPartyIntegrationI18n } from './third-party-integrations.i18n';
 import { extensionCatalogI18n } from './extension-catalog.i18n';
 export const settingsDict = {
+  'settings.providers.page.auth.command.accountName': 'Назва облікового запису (необов\'язково)',
+  'settings.providers.page.auth.command.devinHint': 'Увійдіть у Devin Desktop на хості OpenCode, а потім закрийте програму перед підключенням. Щоб додати інший обліковий запис, змініть вхід у програмі й підключіться знову. Виберіть Використати в списку збережених облікових записів, щоб перемкнутися між ними.',
+  'settings.providers.page.auth.command.waiting': 'Вхід на хості OpenCode…',
+  'settings.providers.page.toast.commandConnected': 'Постачальника підключено',
+  'settings.providers.page.toast.commandConnectFailed': 'Не вдалося ввійти на хості OpenCode. Спробуйте підключитися знову.',
   'settings.sourceControl.ssh.title': 'SSH-ключі',
   'settings.sourceControl.ssh.load': 'Показати ключі',
   'settings.sourceControl.ssh.discover': 'Знайти ключі в ~/.ssh',
@@ -1692,6 +1697,8 @@ export const settingsDict = {
   "settings.providers.page.models.capability.reasoning": "Міркування",
   "settings.providers.page.models.capability.imageInput": "Введення зображення",
   "settings.providers.page.models.tokenBadge.context": "ctx",
+  "settings.providers.page.models.tokenBadge.unknownContext": "Межа контексту невідома",
+  "settings.providers.page.models.tokenBadge.unknownOutput": "Межа виводу невідома",
   "settings.providers.page.models.tokenBadge.output": "out",
   "settings.providers.page.models.actions.hideModelFromSelectors": "Приховати модель від селекторів",
   "settings.providers.page.models.actions.showModelInSelectors": "Показати модель у селекторах",

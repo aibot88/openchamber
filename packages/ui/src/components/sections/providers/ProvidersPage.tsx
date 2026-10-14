@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { useDeviceInfo } from '@/lib/device';
 import type { ModelMetadata } from '@/types';
 import { useI18n } from '@/lib/i18n';
-import { formatCompactNumber } from '@/lib/numberFormat';
+import { providerModelTokenSummary } from './providerModelLimits';
 import { runtimeFetch } from '@/lib/runtime-fetch';
 import { updateDesktopSettings } from '@/lib/persistence';
 import { opencodeClient } from '@/lib/opencode/client';
@@ -63,17 +63,6 @@ import {
   type ProviderConfigScope,
   type StoredProviderEntry,
 } from './custom-provider-form';
-
-const formatTokens = (value?: number | null) => {
-  if (typeof value !== 'number' || Number.isNaN(value)) {
-    return null;
-  }
-  if (value === 0) {
-    return '0';
-  }
-  const formatted = formatCompactNumber(value);
-  return formatted.endsWith('.0') ? formatted.slice(0, -2) : formatted;
-};
 
 // OpenCode owns the credential and announces the catalog change itself
 // (`credential.updated` → catalog refresh); nothing to reload after it.
@@ -245,8 +234,8 @@ export const ProvidersPage: React.FC = () => {
   );
 
   const unconnectedProviders = React.useMemo(
-    () => (catalog ? listConnectableProviders(catalog, connectedProviderIds) : null),
-    [catalog, connectedProviderIds]
+    () => (catalog ? listConnectableProviders(catalog, connectedProviderIds, candidateProviderId) : null),
+    [catalog, connectedProviderIds, candidateProviderId]
   );
 
   React.useEffect(() => {
@@ -674,6 +663,7 @@ export const ProvidersPage: React.FC = () => {
                             key={candidateProviderId}
                             integrationId={getSignInIntegrationId(candidateProviderId)}
                             methods={candidateSignInMethods}
+                            directory={settingsDirectory}
                             onConnected={() => handleOAuthConnected(candidateProviderId)}
                             className={cn(showApiKey && 'border-t border-[var(--surface-subtle)] pt-2')}
                           />
@@ -912,6 +902,7 @@ export const ProvidersPage: React.FC = () => {
                 key={selectedProvider.id}
                 integrationId={getSignInIntegrationId(selectedProvider.id)}
                 methods={signInMethods}
+                directory={settingsDirectory}
                 onConnected={() => handleOAuthConnected(selectedProvider.id)}
                 className={cn(showApiKeyAuth && 'border-t border-[var(--surface-subtle)] pt-2')}
               />
@@ -977,12 +968,14 @@ export const ProvidersPage: React.FC = () => {
                     (item) => item.providerID === selectedProvider.id && item.modelID === modelId
                   );
 
-                  const contextTokens = formatTokens(metadata?.limit?.context);
-                  const outputTokens = formatTokens(metadata?.limit?.output);
-                  const tokenSummary = [
-                    contextTokens ? `${contextTokens} ${t('settings.providers.page.models.tokenBadge.context')}` : null,
-                    outputTokens ? `${outputTokens} ${t('settings.providers.page.models.tokenBadge.output')}` : null,
-                  ].filter(Boolean).join(' · ');
+                  const tokenLabels = {
+                    context: t('settings.providers.page.models.tokenBadge.context'),
+                    output: t('settings.providers.page.models.tokenBadge.output'),
+                    unknownContext: t('settings.providers.page.models.tokenBadge.unknownContext'),
+                    unknownOutput: t('settings.providers.page.models.tokenBadge.unknownOutput'),
+                  };
+                  const tokenSummary = providerModelTokenSummary(metadata?.limit, tokenLabels);
+                  const tokenBadge = providerModelTokenSummary(metadata?.limit, tokenLabels, true);
 
                   const capabilityIcons: Array<{ key: string; icon: IconName; label: string }> = [];
                   if (metadata?.tool_call) capabilityIcons.push({ key: 'tools', icon: "tools", label: t('settings.providers.page.models.capability.toolCalling') });
@@ -1020,8 +1013,8 @@ export const ProvidersPage: React.FC = () => {
                         ) : (
                           <>
                         {tokenSummary ? (
-                          <span className="typography-micro text-muted-foreground flex-shrink-0 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded">
-                            {tokenSummary}
+                          <span className="typography-micro text-muted-foreground flex-shrink-0 bg-[var(--surface-muted)] px-1.5 py-0.5 rounded" title={tokenSummary}>
+                            {tokenBadge}
                           </span>
                         ) : null}
                         {capabilityIcons.length > 0 && (

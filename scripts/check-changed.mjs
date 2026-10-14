@@ -79,13 +79,36 @@ export const findRatchetViolations = (baseCounts, currentCounts) => {
   return violations.sort((left, right) => left.rule.localeCompare(right.rule));
 };
 
+const NO_LINT_FILES = 'No files found to lint. Please check your paths and ignore patterns.';
+
+export const readOxlintDiagnostics = (result) => {
+  if (result.error || result.signal || ![0, 1].includes(result.status)) {
+    throw new Error(`oxlint did not complete: ${result.stderr ?? ''}`, { cause: result.error });
+  }
+  const output = result.stdout?.trim() ?? '';
+  const noFiles = output.startsWith(NO_LINT_FILES);
+  const json = noFiles ? output.slice(NO_LINT_FILES.length).trim() : output;
+  if (!json) throw new Error(`oxlint produced no report: ${result.stderr ?? ''}`);
+  const report = JSON.parse(json);
+  if (!Array.isArray(report?.diagnostics)) throw new Error('oxlint returned an invalid diagnostics report');
+  // Oxlint prefixes its JSON report with this message and exits 1 when every
+  // input is ignored. Only its explicit zero-file, zero-diagnostic report counts
+  // as empty. A missing report or any other process failure still stops the gate.
+  if (noFiles && (report.number_of_files !== 0 || report.diagnostics.length !== 0)) {
+    throw new Error('oxlint returned an inconsistent zero-file report');
+  }
+  if (!noFiles && result.status === 1 && report.diagnostics.length === 0) {
+    throw new Error('oxlint exited unsuccessfully without diagnostics');
+  }
+  return report.diagnostics;
+};
+
 const runOxlint = (files, cwd) => {
   if (files.length === 0) return [];
   const result = spawnSync('bunx', ['oxlint', '-c', OXLINT_CONFIG, '-f', 'json', ...files], {
     cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
   });
-  if (!result.stdout) throw new Error(`oxlint produced no report: ${result.stderr}`);
-  return JSON.parse(result.stdout).diagnostics;
+  return readOxlintDiagnostics(result);
 };
 
 const checkAntiSlopRatchet = (base, files) => {

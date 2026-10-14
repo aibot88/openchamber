@@ -4,6 +4,11 @@ import { linearIntegrationI18n } from './linear-integration.i18n';
 import { thirdPartyIntegrationI18n } from './third-party-integrations.i18n';
 import { extensionCatalogI18n } from './extension-catalog.i18n';
 export const settingsDict = {
+  'settings.providers.page.auth.command.accountName': 'Accountnaam (optioneel)',
+  'settings.providers.page.auth.command.devinHint': 'Meld je op de OpenCode-host aan bij Devin Desktop en sluit de app voordat je verbinding maakt. Voor een ander account wissel je de desktopaanmelding en maak je opnieuw verbinding. Kies Gebruiken in de lijst met opgeslagen accounts om van account te wisselen.',
+  'settings.providers.page.auth.command.waiting': 'Aanmelden op de OpenCode-host…',
+  'settings.providers.page.toast.commandConnected': 'Provider verbonden',
+  'settings.providers.page.toast.commandConnectFailed': 'Aanmelden op de OpenCode-host is mislukt. Probeer opnieuw te verbinden.',
   'settings.sourceControl.ssh.title': 'SSH-sleutels',
   'settings.sourceControl.ssh.load': 'Sleutels tonen',
   'settings.sourceControl.ssh.discover': 'Sleutels zoeken in ~/.ssh',
@@ -1739,6 +1744,8 @@ export const settingsDict = {
   'settings.providers.page.models.capability.reasoning': 'Redenering',
   'settings.providers.page.models.capability.imageInput': 'Afbeeldingsinvoer',
   'settings.providers.page.models.tokenBadge.context': 'ctx',
+  'settings.providers.page.models.tokenBadge.unknownContext': 'Context onbekend',
+  'settings.providers.page.models.tokenBadge.unknownOutput': 'Uitvoerlimiet onbekend',
   'settings.providers.page.models.tokenBadge.output': 'uit',
   'settings.providers.page.models.actions.hideModelFromSelectors': 'Model verbergen in selectors',
   'settings.providers.page.models.actions.showModelInSelectors': 'Model tonen in selectors',

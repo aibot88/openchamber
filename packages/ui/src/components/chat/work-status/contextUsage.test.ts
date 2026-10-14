@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { computeContextUsage, DEFAULT_CONTEXT_LIMIT } from './contextUsage';
+import { computeContextUsage } from './contextUsage';
 
 const assistant = (tokens: Record<string, unknown>, id = 'msg') => ({ id, role: 'assistant', tokens });
 
@@ -8,7 +8,8 @@ const compaction = (tokens: Record<string, unknown>, id = 'summary') => ({ id, r
 
 const measured = (usage: ReturnType<typeof computeContextUsage>) => {
   if (usage?.state !== 'measured') throw new Error(`expected a measured reading, got ${usage?.state ?? 'null'}`);
-  return usage;
+  if (usage.percent === null) throw new Error('expected a known context limit');
+  return { ...usage, percent: usage.percent };
 };
 
 describe('computeContextUsage', () => {
@@ -53,10 +54,11 @@ describe('computeContextUsage', () => {
     expect(measured(usage).percent.toFixed(1)).toBe('33.6');
   });
 
-  test('falls back to the default limit when the model exposes none', () => {
-    const usage = computeContextUsage([assistant({ input: 20_000, output: 0, reasoning: 0 })], 0);
-    expect(usage?.limit).toBe(DEFAULT_CONTEXT_LIMIT);
-    expect(measured(usage).percent).toBe(10);
+  test('retains measured tokens without inventing a percentage for an unknown limit', () => {
+    for (const limit of [0, -1, NaN, Infinity]) {
+      const usage = computeContextUsage([assistant({ input: 20_000, output: 0, reasoning: 0 })], limit);
+      expect(usage).toEqual({ state: 'measured', totalTokens: 20_000, limit: 0, percent: null });
+    }
   });
 
   test('returns null when no message carries usable tokens', () => {

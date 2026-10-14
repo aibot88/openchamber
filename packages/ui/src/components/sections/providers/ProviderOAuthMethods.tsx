@@ -1,6 +1,7 @@
 import React from 'react';
 import type { FormField, FormValue } from '@opencode/client';
 import { Button } from '@/components/ui/button';
+import { SettingsStackedField } from '@/components/sections/shared/SettingsSection';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui';
 import { Icon } from '@/components/icon/Icon';
@@ -9,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { openExternalUrl } from '@/lib/url';
 import { opencodeClient } from '@/lib/opencode/client';
+import type { ProviderCommandAttempt } from '@/lib/opencode/model';
 import {
   collectFieldAnswer,
   defaultFieldValues,
@@ -45,9 +47,12 @@ type Flow =
   | { phase: 'connecting'; methodID: string }
   /** `auto`: the attempt is polled until the browser sign-in finishes. */
   | { phase: 'waiting'; methodID: string; attempt: OAuthAttempt }
+  | { phase: 'waitingCommand'; methodID: string }
   /** `code`: waiting for the user to paste a code out of the browser. */
   | { phase: 'awaitingCode'; methodID: string; attempt: OAuthAttempt; submitting: boolean }
   | { phase: 'failed'; methodID: string; message: string };
+
+type PendingCommand = { controller: AbortController; attempt?: ProviderCommandAttempt };
 
 const IDLE: Flow = { phase: 'idle' };
 
@@ -55,7 +60,7 @@ const IDLE: Flow = { phase: 'idle' };
 const STATUS_POLL_INTERVAL_MS = 1500;
 
 /**
- * Sign-in for a provider's OAuth and external-credential methods.
+ * Sign-in for a provider's OAuth, command and external-credential methods.
  *
  * For OAuth, the mode reported by `integration.oauth.connect` drives
  * everything: `auto` polls `integration.oauth.status` until the attempt
@@ -84,8 +89,18 @@ export const ProviderOAuthMethods: React.FC<ProviderOAuthMethodsProps> = ({
   const [flow, setFlow] = React.useState<Flow>(IDLE);
   const [fieldValues, setFieldValues] = React.useState<Record<string, FormValue>>({});
   const [codeInput, setCodeInput] = React.useState('');
+  const [accountLabel, setAccountLabel] = React.useState('');
+  const accountLabelId = React.useId();
   /** Set while a poll loop is live; clearing it stops the loop at its next tick. */
   const activeAttemptRef = React.useRef<string | null>(null);
+  const commandRef = React.useRef<PendingCommand | null>(null);
+
+  const cancelCommand = React.useCallback(() => {
+    const pending = commandRef.current;
+    commandRef.current = null;
+    pending?.controller.abort();
+    void pending?.attempt?.cancel().catch(() => undefined);
+  }, []);
 
   const cancelAttempt = React.useCallback((attemptID: string) => {
     activeAttemptRef.current = null;
@@ -97,11 +112,13 @@ export const ProviderOAuthMethods: React.FC<ProviderOAuthMethodsProps> = ({
   React.useEffect(() => () => {
     const pending = activeAttemptRef.current;
     if (pending) cancelAttempt(pending);
-  }, [cancelAttempt]);
+    cancelCommand();
+  }, [cancelAttempt, cancelCommand]);
 
   const activeMethodID = flow.phase === 'idle' ? null : flow.methodID;
   const busy = flow.phase === 'connecting'
     || flow.phase === 'waiting'
+    || flow.phase === 'waitingCommand'
     || (flow.phase === 'awaitingCode' && flow.submitting);
 
   const copy = async (value: string, successKey: I18nKey, failureKey: I18nKey) => {
@@ -175,6 +192,41 @@ export const ProviderOAuthMethods: React.FC<ProviderOAuthMethodsProps> = ({
   };
 
   const runConnect = async (method: SignInMethod, answer: Record<string, FormValue>) => {
+    if (method.type === 'command') {
+      if (commandRef.current) return;
+      const pending: PendingCommand = { controller: new AbortController() };
+      commandRef.current = pending;
+      setFlow({ phase: 'waitingCommand', methodID: method.id });
+      try {
+        pending.attempt = await opencodeClient.connectProviderCommand({ integrationID: integrationId, methodID: method.id, label: accountLabel, directory });
+        if (pending.controller.signal.aborted) { await pending.attempt.cancel(); return; }
+        while (!pending.controller.signal.aborted) {
+          const status = await pending.attempt.status();
+          if (pending.controller.signal.aborted) return;
+          if (status.status === 'complete') {
+            commandRef.current = null;
+            setAccountLabel('');
+            await succeed('settings.providers.page.toast.commandConnected').catch(() => {
+              toast.error(t('settings.providers.page.toast.providerSourcesLoadFailed'));
+            });
+            return;
+          }
+          if (status.status === 'failed' || status.status === 'expired') {
+            commandRef.current = null;
+            setFlow({ phase: 'failed', methodID: method.id, message: status.status === 'failed' ? status.message : t('settings.providers.page.auth.oauth.error.sessionExpired') });
+            return;
+          }
+          await new Promise((resolve) => setTimeout(resolve, STATUS_POLL_INTERVAL_MS));
+        }
+      } catch (error) {
+        if (pending.controller.signal.aborted) return;
+        cancelCommand();
+        // Authentication errors and command stderr can contain credentials.
+        // Display the provider's safe error, but never write it to the console.
+        setFlow({ phase: 'failed', methodID: method.id, message: describeOAuthError(error, t, 'settings.providers.page.toast.commandConnectFailed') });
+      }
+      return;
+    }
     if (method.type === 'external') {
       await runExternalConnect(method.id, answer);
       return;
@@ -214,7 +266,7 @@ export const ProviderOAuthMethods: React.FC<ProviderOAuthMethodsProps> = ({
   };
 
   const beginConnect = (method: SignInMethod) => {
-    const fields = (method.form ?? []).filter(isAnswerableField);
+    const fields = (method.type === 'command' ? [] : method.form ?? []).filter(isAnswerableField);
     if (fields.length === 0) {
       void runConnect(method, {});
       return;
@@ -262,6 +314,7 @@ export const ProviderOAuthMethods: React.FC<ProviderOAuthMethodsProps> = ({
 
   /** Drops the attempt upstream so a half-finished sign-in cannot be resumed by accident. */
   const cancel = () => {
+    cancelCommand();
     if (flow.phase === 'waiting' || flow.phase === 'awaitingCode') {
       cancelAttempt(flow.attempt.attemptID);
     }
@@ -339,6 +392,15 @@ export const ProviderOAuthMethods: React.FC<ProviderOAuthMethodsProps> = ({
 
   return (
     <div className={cn('space-y-4', className)}>
+      {methods.some((method) => method.type === 'command') && (
+        <SettingsStackedField
+          label={<label htmlFor={accountLabelId}>{t('settings.providers.page.auth.command.accountName')}</label>}
+          description={integrationId === 'devin-subscription' ? t('settings.providers.page.auth.command.devinHint') : undefined}
+        >
+          <Input id={accountLabelId} value={accountLabel} disabled={busy} autoComplete="off"
+            onChange={(event) => setAccountLabel(event.target.value)} />
+        </SettingsStackedField>
+      )}
       {methods.map((method) => {
         const isActive = activeMethodID === method.id;
 
@@ -402,6 +464,18 @@ export const ProviderOAuthMethods: React.FC<ProviderOAuthMethodsProps> = ({
                 <p className="typography-meta text-muted-foreground">
                   {t('settings.providers.page.auth.oauth.waitingHint')}
                 </p>
+              </div>
+            )}
+
+            {isActive && flow.phase === 'waitingCommand' && (
+              <div className="flex items-center justify-between gap-2">
+                <p className="typography-meta text-muted-foreground flex items-center gap-2" role="status">
+                  <Icon name="loader" className="h-3.5 w-3.5 animate-spin" />
+                  {t('settings.providers.page.auth.command.waiting')}
+                </p>
+                <Button variant="ghost" size="xs" className="!font-normal shrink-0" onClick={cancel}>
+                  {t('settings.providers.page.actions.cancel')}
+                </Button>
               </div>
             )}
 

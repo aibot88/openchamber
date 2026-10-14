@@ -1,5 +1,5 @@
 export type ContextWindowLimits = {
-  /** 0 when unknown; the readouts then fall back to their own default. */
+  /** 0 when unknown; readouts must not invent a window or usage percentage. */
   context: number;
   output: number;
 };

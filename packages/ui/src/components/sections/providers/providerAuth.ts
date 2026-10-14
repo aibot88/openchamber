@@ -17,7 +17,7 @@ import type {
   IntegrationOAuthMethod,
 } from '@opencode/client';
 import { z } from 'zod';
-import type { Provider } from '@/lib/opencode/model';
+import type { Provider, ProviderCommandMethod } from '@/lib/opencode/model';
 
 export type CredentialConnection = Extract<ConnectionInfo, { type: 'credential' }>;
 
@@ -78,15 +78,21 @@ export const getProviderConnections = (
 
 /**
  * Methods that sign in with a button rather than a pasted key: OAuth, and
- * external credentials OpenCode references outside its store (2.0.25+: an
+ * command authentication on the OpenCode host, and external credentials
+ * OpenCode references outside its store (2.0.25+: an
  * Azure CLI login, an AWS profile). Kept in the integration's declared order.
  */
-export type SignInMethod = IntegrationOAuthMethod | IntegrationExternalMethod;
+export type SignInMethod = IntegrationOAuthMethod | IntegrationExternalMethod | ProviderCommandMethod;
 
 export const getSignInMethods = (
   integration: IntegrationInfo | undefined,
 ): SignInMethod[] =>
-  (integration?.methods ?? []).filter((method): method is SignInMethod => method.type === 'oauth' || method.type === 'external');
+  (integration?.methods ?? []).flatMap((method): SignInMethod[] => {
+    if (method.type === 'oauth' || method.type === 'external') return [method];
+    // Command arguments stay on the host. The UI only needs the declared label.
+    if (method.type === 'command') return [{ type: method.type, id: method.id, label: method.label }];
+    return [];
+  });
 
 export const getKeyMethod = (
   integration: IntegrationInfo | undefined,

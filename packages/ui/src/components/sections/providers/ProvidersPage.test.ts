@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ConnectionInfo, IntegrationInfo } from '@opencode/client';
 import { requiresProviderAuth } from './providerAvailability';
+import { providerModelTokenSummary } from './providerModelLimits';
 import {
   findIntegrationForProvider,
   getCredentialConnections,
@@ -26,6 +27,31 @@ const integration = (overrides: Partial<IntegrationInfo> = {}): IntegrationInfo 
 
 const credential: ConnectionInfo = { type: 'credential', id: 'cred_1', label: 'API key', method: 'key' };
 const envConnection: ConnectionInfo = { type: 'env', name: 'ANTHROPIC_API_KEY' };
+
+describe('provider model token limits', () => {
+  const labels = { context: 'ctx', output: 'out', unknownContext: 'Context unknown', unknownOutput: 'Output unknown' };
+  test('formats reported model limits', () => {
+    expect(providerModelTokenSummary({ context: 1_000_000, output: 128_000 }, labels)).toBe('1M ctx · 128K out');
+  });
+  test('missing and zero limits are unknown, not zero capacity', () => {
+    expect(providerModelTokenSummary(undefined, labels)).toBe('Context unknown · Output unknown');
+    expect(providerModelTokenSummary({ context: 0, output: 0 }, labels)).toBe('Context unknown · Output unknown');
+  });
+  test('keeps known fields when the other limit is absent or invalid', () => {
+    expect(providerModelTokenSummary({ context: 200_000 }, labels)).toBe('200K ctx · Output unknown');
+    expect(providerModelTokenSummary({ context: Infinity, output: 8192 }, labels)).toBe('Context unknown · 8.2K out');
+    expect(providerModelTokenSummary({ context: -1, output: NaN }, labels)).toBe('Context unknown · Output unknown');
+  });
+  test('uses translated labels supplied at render time', () => {
+    expect(providerModelTokenSummary({ context: 0, output: 65_536 }, {
+      context: '上下文', output: '输出', unknownContext: '上下文未知', unknownOutput: '输出未知',
+    })).toBe('上下文未知 · 65.5K 输出');
+  });
+  test('uses a compact unknown badge without crowding out the model name', () => {
+    expect(providerModelTokenSummary({ context: 0, output: 0 }, labels, true)).toBe('— ctx · — out');
+    expect(providerModelTokenSummary({ context: 1_000_000, output: 0 }, labels, true)).toBe('1M ctx · — out');
+  });
+});
 
 describe('ProvidersPage provider authentication', () => {
   test('does not require credentials for a custom provider defined in config', () => {
@@ -53,15 +79,17 @@ describe('integration method helpers', () => {
     expect(shouldShowApiKeyAuth(undefined)).toBe(true);
   });
 
-  test('getSignInMethods keeps oauth and external methods, in declared order', () => {
+  test('getSignInMethods keeps oauth, command and external methods, in declared order', () => {
     const methods: IntegrationInfo['methods'] = [
       { type: 'key', label: 'API Key' },
       { type: 'oauth', id: 'browser', label: 'OAuth' },
       { type: 'env', names: ['OPENAI_API_KEY'] },
       { type: 'external', id: 'aws-profile', label: 'AWS profile' },
+      { type: 'command', id: 'desktop-import', label: 'Import desktop login', command: ['registered-host-command'] },
       { type: 'oauth', id: 'device', label: 'Device' },
     ];
-    expect(getSignInMethods(integration({ methods })).map((method) => method.id)).toEqual(['browser', 'aws-profile', 'device']);
+    expect(getSignInMethods(integration({ methods })).map((method) => method.id)).toEqual(['browser', 'aws-profile', 'desktop-import', 'device']);
+    expect(getSignInMethods(integration({ methods }))[2]).toEqual({ type: 'command', id: 'desktop-import', label: 'Import desktop login' });
     expect(getSignInMethods(undefined)).toEqual([]);
   });
 

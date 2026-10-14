@@ -18,8 +18,7 @@ import { useDirectorySync } from '@/sync/sync-context';
  * newest answer's model stands in when the record names none (older sessions),
  * and the composer's model only before the first answer. Under Auto the
  * composer names no real model at all (the server picks one per turn), so
- * without the record or an answer Auto reads as "no limit" and the readouts
- * divide by the 200k default.
+ * without the record or an answer Auto reads as an unknown limit.
  */
 export const useContextWindowLimits = (sessionId: string | null, directory?: string): ContextWindowLimits => {
   const currentProviderId = useConfigStore((state) => state.currentProviderId);

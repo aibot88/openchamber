@@ -102,6 +102,61 @@ beforeEach(() => {
   opencodeClient.clearConfigCache()
 })
 
+describe('provider command authentication', () => {
+  const started = () => json({ location: { directory: '/repo/app' }, data: { attemptID: 'att_import', time: { created: 1, expires: 9999999999999 } } })
+  const status = (state: 'pending' | 'complete' | 'expired') => json({ location: { directory: '/repo/app' }, data: { status: state, time: { created: 1, expires: 9999999999999 } } })
+
+  test('uses official connect/status/cancel routes and keeps the directory throughout', async () => {
+    responses.push(started(), status('pending'), noContent())
+    const attempt = await opencodeClient.connectProviderCommand({ integrationID: 'devin-subscription', methodID: 'desktop-import', directory: '/repo/app' })
+    expect(await attempt.status()).toEqual({ status: 'pending' })
+    await attempt.cancel()
+    expect(requests.map((request) => [request.method, request.url.pathname])).toEqual([
+      ['POST', '/api/integration/devin-subscription/connect/command'],
+      ['GET', '/api/integration/devin-subscription/connect/command/att_import'],
+      ['DELETE', '/api/integration/devin-subscription/connect/command/att_import'],
+    ])
+    expect(requests[0].body).toEqual({ methodID: 'desktop-import' })
+    for (const request of requests) expect(request.headers.get('x-opencode-directory')).toBe(encodeURIComponent('/repo/app'))
+  })
+  for (const state of ['complete', 'expired'] as const) {
+    test(`projects terminal command status ${state}`, async () => {
+      responses.push(started(), status(state))
+      const attempt = await opencodeClient.connectProviderCommand({ integrationID: 'devin-subscription', methodID: 'desktop-import' })
+      expect(await attempt.status()).toEqual({ status: state })
+    })
+  }
+  test('passes a trimmed account label through the official command-connect body', async () => {
+    responses.push(started())
+    await opencodeClient.connectProviderCommand({ integrationID: 'devin-subscription', methodID: 'desktop-import', label: '  工作账号  ', directory: '/repo/app' })
+    expect(requests[0].body).toEqual({ methodID: 'desktop-import', label: '工作账号' })
+    expect(requests[0].headers.get('x-opencode-directory')).toBe(encodeURIComponent('/repo/app'))
+  })
+  test('leaves an empty account label to OpenCode', async () => {
+    responses.push(started())
+    await opencodeClient.connectProviderCommand({ integrationID: 'devin-subscription', methodID: 'desktop-import', label: '  ' })
+    expect(requests[0].body).toEqual({ methodID: 'desktop-import' })
+  })
+  test('projects only failure text, never command stdout or pending stderr', async () => {
+    responses.push(started(), json({ location: {}, data: { status: 'failed', message: 'Keychain access denied', time: { created: 1, expires: 2 } } }))
+    const attempt = await opencodeClient.connectProviderCommand({ integrationID: 'devin-subscription', methodID: 'desktop-import' })
+    expect(await attempt.status()).toEqual({ status: 'failed', message: 'Keychain access denied' })
+  })
+  test('does not send an old status or cancel request to a newly selected runtime', async () => {
+    responses.push(started())
+    const attempt = await opencodeClient.connectProviderCommand({ integrationID: 'devin-subscription', methodID: 'desktop-import' })
+    runtimeKey = 'different-runtime'
+    await expect(attempt.status()).rejects.toThrow('host changed')
+    await attempt.cancel()
+    expect(requests).toHaveLength(1)
+  })
+  test('rejects a status that arrives after a runtime switch', async () => {
+    responses.push(started(), () => { runtimeKey = 'different-runtime'; return status('complete') })
+    const attempt = await opencodeClient.connectProviderCommand({ integrationID: 'devin-subscription', methodID: 'desktop-import' })
+    await expect(attempt.status()).rejects.toThrow('host changed')
+  })
+})
+
 describe('runtime routing responses', () => {
   const routingFailureSchema = z.object({ message: z.string(), status: z.number() })
   const html = () => new Response('<!doctype html><title>OpenChamber</title>', { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } })

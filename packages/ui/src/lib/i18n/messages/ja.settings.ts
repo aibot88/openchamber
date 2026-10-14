@@ -4,6 +4,11 @@ import { linearIntegrationI18n } from './linear-integration.i18n';
 import { thirdPartyIntegrationI18n } from './third-party-integrations.i18n';
 import { extensionCatalogI18n } from './extension-catalog.i18n';
 export const settingsDict = {
+  'settings.providers.page.auth.command.accountName': 'アカウント名（任意）',
+  'settings.providers.page.auth.command.devinHint': 'OpenCode ホスト上で Devin Desktop にログインし、接続前にデスクトップアプリを終了してください。別のアカウントを追加するには、デスクトップでログイン先を切り替えて再接続します。保存済みアカウントの一覧で「使用」を選ぶと、アカウントを切り替えられます。',
+  'settings.providers.page.auth.command.waiting': 'OpenCode ホストでログイン中…',
+  'settings.providers.page.toast.commandConnected': 'プロバイダーに接続しました',
+  'settings.providers.page.toast.commandConnectFailed': 'OpenCode ホストでログインできませんでした。もう一度接続してください。',
   'settings.sourceControl.ssh.title': 'SSH キー',
   'settings.sourceControl.ssh.load': 'キーを表示',
   'settings.sourceControl.ssh.discover': '~/.ssh でキーを探す',
@@ -1747,6 +1752,8 @@ export const settingsDict = {
   'settings.providers.page.models.capability.reasoning': '推論',
   'settings.providers.page.models.capability.imageInput': '画像入力',
   'settings.providers.page.models.tokenBadge.context': 'ctx',
+  'settings.providers.page.models.tokenBadge.unknownContext': 'コンテキスト上限不明',
+  'settings.providers.page.models.tokenBadge.unknownOutput': '出力上限不明',
   'settings.providers.page.models.tokenBadge.output': 'out',
   'settings.providers.page.models.actions.hideModelFromSelectors': 'セレクターからモデルを非表示',
   'settings.providers.page.models.actions.showModelInSelectors': 'セレクターにモデルを表示',

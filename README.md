@@ -136,6 +136,31 @@ Go deeper with the OpenChamber guides:
 
 For self-hosting details, see the [reverse proxy guide](docs/REVERSE_PROXY.md). For custom theme authoring, see the [custom themes guide](docs/CUSTOM_THEMES.md).
 
+## Gemini subscription provider in this fork
+
+This fork includes an experimental OpenCode 2 provider in
+[`.opencode/plugins/google-ai-pro`](.opencode/plugins/google-ai-pro/README.md).
+It connects Google AI Pro through Antigravity OAuth and keeps model switches in
+the existing session through OpenCode's plugin hooks.
+
+Google prohibits third-party subscription access and may suspend accounts using
+it. Local fixture tests pass; successful Google inference is still unverified.
+Read the plugin's installation and risk notes before connecting an account.
+
+## Devin subscription provider in this fork
+
+The experimental [Devin provider](.opencode/plugins/devin-subscription/README.md)
+imports a local macOS Devin Desktop login on an explicit connection action and
+discovers models from its Connect-RPC catalog. This fork adds command authentication
+to the Providers page. OpenCode keeps the existing session, tools and permissions
+when switching A -> Devin model 1 -> Devin model 2 -> A.
+
+Quit Devin before importing. The importer refuses active database journals and
+reads only the specified saved login and Keychain item. Offline continuation and
+synthetic import pass on OpenCode 2.0.26. Real account access, model entitlement and
+billing remain unverified. Nonofficial access can suspend the account and can
+incur charges. Read the provider's installation and risk notes before connecting.
+
 ## Why OpenCode?
 
 OpenChamber uses [OpenCode](https://opencode.ai) to run coding agents. We chose it because it is open source, has a solid API, and is easy to extend.

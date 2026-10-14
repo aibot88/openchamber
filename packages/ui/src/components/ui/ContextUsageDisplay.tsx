@@ -43,7 +43,8 @@ export const ContextUsageDisplay: React.FC<ContextUsageDisplayProps> = ({
 }) => {
   const { t } = useI18n();
   const [mobileTooltipOpen, setMobileTooltipOpen] = React.useState(false);
-  const isMeasured = reading.state === 'measured';
+  const hasMeasuredTokens = reading.state === 'measured';
+  const isMeasured = hasMeasuredTokens && Number.isFinite(contextLimit) && contextLimit > 0;
   const percentage = isMeasured ? reading.percentage : 0;
   const colorPct = isMeasured ? reading.colorPercentage ?? percentage : 0;
   const progressPct = clampPercent(percentage) ?? 0;
@@ -76,16 +77,18 @@ export const ContextUsageDisplay: React.FC<ContextUsageDisplayProps> = ({
   const circularProgressCircumference = 2 * Math.PI * circularProgressRadius;
   const circularProgressOffset = circularProgressCircumference * (1 - progressPct / 100);
 
-  const safeOutputLimit = typeof outputLimit === 'number' ? Math.max(outputLimit, 0) : 0;
+  const safeOutputLimit = typeof outputLimit === 'number' && Number.isFinite(outputLimit) ? Math.max(outputLimit, 0) : 0;
+  const contextLimitLabel = Number.isFinite(contextLimit) && contextLimit > 0 ? formatTokens(contextLimit) : UNKNOWN_VALUE;
+  const outputLimitLabel = safeOutputLimit > 0 ? formatTokens(safeOutputLimit) : UNKNOWN_VALUE;
   const normalizedCost = cost ?? 0;
   const hasCost = normalizedCost > 0 && Number.isFinite(normalizedCost);
   const percentLabel = isMeasured ? `${Math.min(percentage, 999).toFixed(1)}%` : UNKNOWN_VALUE;
   const tooltipLines = [
-    isMeasured
+    hasMeasuredTokens
       ? t('contextUsage.tooltip.usedTokens', { tokens: formatTokens(reading.totalTokens) })
       : t('contextUsage.compacted.description'),
-    t('contextUsage.tooltip.contextLimit', { tokens: formatTokens(contextLimit) }),
-    t('contextUsage.tooltip.outputLimit', { tokens: formatTokens(safeOutputLimit) }),
+    t('contextUsage.tooltip.contextLimit', { tokens: contextLimitLabel }),
+    t('contextUsage.tooltip.outputLimit', { tokens: outputLimitLabel }),
     ...(hasCost ? [t('contextUsage.tooltip.cost', { cost: formatMoney(normalizedCost) })] : []),
   ];
 
@@ -187,15 +190,15 @@ export const ContextUsageDisplay: React.FC<ContextUsageDisplayProps> = ({
             <div className="rounded-xl border border-border/40 bg-sidebar/30 px-3 py-2 space-y-1">
               <div className="flex justify-between items-center">
                 <span className="typography-meta text-muted-foreground">{t('contextUsage.mobile.usedTokens')}</span>
-                <span className="typography-meta text-foreground font-medium">{isMeasured ? formatTokens(reading.totalTokens) : UNKNOWN_VALUE}</span>
+                <span className="typography-meta text-foreground font-medium">{hasMeasuredTokens ? formatTokens(reading.totalTokens) : UNKNOWN_VALUE}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="typography-meta text-muted-foreground">{t('contextUsage.mobile.contextLimit')}</span>
-                <span className="typography-meta text-foreground font-medium">{formatTokens(contextLimit)}</span>
+                <span className="typography-meta text-foreground font-medium">{contextLimitLabel}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="typography-meta text-muted-foreground">{t('contextUsage.mobile.outputLimit')}</span>
-                <span className="typography-meta text-foreground font-medium">{formatTokens(safeOutputLimit)}</span>
+                <span className="typography-meta text-foreground font-medium">{outputLimitLabel}</span>
               </div>
               {hasCost ? (
                 <div className="flex justify-between items-center">
@@ -210,7 +213,7 @@ export const ContextUsageDisplay: React.FC<ContextUsageDisplayProps> = ({
                 </span>
               </div>
             </div>
-            {isMeasured ? null : (
+            {hasMeasuredTokens ? null : (
               <p className="px-1 typography-meta text-muted-foreground">{t('contextUsage.compacted.description')}</p>
             )}
           </div>

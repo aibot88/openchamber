@@ -35,6 +35,15 @@ const localeDictionaries = {
 } as const;
 
 describe('i18n dictionaries', () => {
+  test('unknown model context and output limits are translated in every locale', () => {
+    const keys = ['settings.providers.page.models.tokenBadge.unknownContext', 'settings.providers.page.models.tokenBadge.unknownOutput'] as const;
+    for (const [locale, dictionary] of Object.entries(localeDictionaries)) {
+      for (const key of keys) {
+        expect(dictionary[key]).toBeTruthy();
+        if (locale !== 'en') expect(dictionary[key]).not.toBe(enDict[key]);
+      }
+    }
+  });
   test('anonymous transport has a translated read-only label in every locale', () => {
     const key = 'settings.sourceControl.transport.anonymous';
     expect(enDict[key]).toBe('Anonymous HTTPS, read-only');

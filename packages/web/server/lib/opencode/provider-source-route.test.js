@@ -29,6 +29,7 @@ describe('provider writes in enterprise mode', () => {
     agent.post('/api/integration/anthropic/connect/oauth').send({ methodID: 'claude-pro' }),
     agent.post('/api/integration/anthropic/connect/oauth/att_1/complete').send({ code: 'x' }),
     agent.post('/api/integration/github-copilot/connect/command').send({ methodID: 'cli' }),
+    agent.post('/api/integration/devin-subscription/connect/command').send({ methodID: 'devin-desktop-import' }),
     agent.post('/api/experimental/integration/wellknown').send({ url: 'https://example.test' }),
     agent.put('/api/provider').send({ providerID: 'company-ai', config: {}, scope: 'user' }),
     // OpenCode routes these to the key handler too.
@@ -72,6 +73,7 @@ describe('provider writes in enterprise mode', () => {
     const connect = await request(createApp(vi.fn())).post('/api/integration/openai/connect/key').send({ key: 'sk-test' });
     // No proxy in this app: falling through reads as Express's 404.
     expect(connect.status).toBe(404);
+    expect((await request(createApp(vi.fn())).post('/api/integration/devin-subscription/connect/command').send({ methodID: 'devin-desktop-import' })).status).toBe(404);
   });
 });
 

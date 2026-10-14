@@ -42,6 +42,27 @@ describe('listConnectableProviders', () => {
   test('falls back to the id when an integration has no name', () => {
     expect(listConnectableProviders(catalog([integration('local', '')]), new Set())).toEqual([{ id: 'local', name: 'local' }]);
   });
+
+  test('a chosen sign-in stays mounted when provider/model registration precedes auth completion', () => {
+    const before = catalog([integration('devin-subscription', 'Devin subscription')]);
+    const listed = new Set(['devin-subscription']);
+    expect(listConnectableProviders(before, listed)).toEqual([]);
+    expect(listConnectableProviders(before, listed, 'devin-subscription'))
+      .toEqual([{ id: 'devin-subscription', name: 'Devin subscription' }]);
+    const saved = catalog([integration('devin-subscription', 'Devin subscription', {
+      connections: [{ type: 'credential', id: 'cred_fixture', label: 'Fixture', method: 'key' }],
+    })]);
+    expect(listConnectableProviders(saved, listed, 'devin-subscription'))
+      .toEqual([{ id: 'devin-subscription', name: 'Devin subscription' }]);
+    // The successful flow clears its choice; normal picker filtering resumes.
+    expect(listConnectableProviders(saved, listed, '')).toEqual([]);
+  });
+
+  test('the chosen provider must still be an available provider integration', () => {
+    expect(listConnectableProviders(catalog([]), new Set(), 'removed')).toEqual([]);
+    expect(listConnectableProviders(catalog([integration('mcp_fixture', 'MCP')]), new Set(), 'mcp_fixture')).toEqual([]);
+    expect(listConnectableProviders(catalog([integration('exa', 'Exa')], new Set(['exa'])), new Set(), 'exa')).toEqual([]);
+  });
 });
 
 describe('splitConnectableProviders', () => {
