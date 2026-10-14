@@ -84,12 +84,33 @@ rejects a key whose required fields are missing. A `custom` field with options
 (AWS profiles, Azure resources OpenCode found on the server) offers "Other…"
 for a value it did not find.
 
-A provider's sign-in buttons come from its integration's `oauth` and
-`external` methods in declared order (`getSignInMethods`), both rendered by
+A provider's sign-in buttons come from its integration's `oauth`, `command` and
+`external` methods in declared order (`getSignInMethods`), all rendered by
 `providers/ProviderOAuthMethods.tsx`. An `external` method (2.0.25+: Azure CLI
 login, AWS profile for Bedrock) asks only its form and calls
 `integration.connect.external`, which stores a reference to credentials managed
 outside OpenCode; the account then lists as "External credentials".
+
+A `command` method runs only the command registered by the integration, on the
+connected OpenCode host. The optional account name is sent as `label` on the
+official command-connect request and cleared after successful storage. Failure
+keeps the name for an explicit retry. Devin's import hint describes separate
+desktop logins and manual selection of saved accounts.
+
+`opencodeClient.connectProviderCommand` owns SDK connect/status/
+cancel calls and directory scoping; command arguments and secret stdout are never
+rendered. The page polls only an active attempt, shows a cancellable waiting state,
+and cancels on user action or unmount, including when connect finishes late.
+The selected connect form stays mounted across provider/model and credential
+refreshes until the flow reports completion. Those events can arrive before the
+status response; removing the candidate early would cancel the flow and skip the
+page's account refresh. Requests name the Settings-selected project directory.
+After a runtime switch, no old attempt ID is sent to the new host; an unreachable
+attempt expires on its original host. Stored credentials refresh the normal
+provider catalog. Existing enterprise provider-entry restrictions cover this
+method too. The shared flow is available on web, desktop, VS Code and both mobile
+surfaces; platform-specific credential import runs on the host, not the UI client.
+Methods are dynamic provider rows, not separate Settings search entries.
 
 Vertex can sign in through Google Application Default Credentials on the server
 machine, which OpenCode neither stores nor reports as a connection. When
@@ -113,6 +134,13 @@ with a validation error opens on submit. Capabilities are written to the
 OpenCode config only when they are known (saved config, discovery, or the
 user's edit, `capabilitiesKnown`); otherwise the key is left out so a save
 never replaces what OpenCode knows about a model with a text-only default.
+
+The provider inventory's token badges use live OpenCode limits. A missing, zero,
+negative or nonfinite value renders as an unknown context/output limit. Zero is
+the subscription adapters' unknown sentinel and must not appear as zero capacity.
+The row uses compact `— ctx` / `— out` badges and a fully translated unknown-limit
+description in its title. This formatting is shared by web, Electron, VS Code,
+hosted mobile and Capacitor; mobile shows the full summary in the row's info hint.
 
 Custom-provider icons are OpenChamber profile preferences, keyed by provider
 ID. They are not written into OpenCode config because OpenCode has no provider

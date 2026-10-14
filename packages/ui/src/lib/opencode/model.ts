@@ -50,6 +50,15 @@ export type Command = CommandInfo
 export type Skill = SkillInfo
 export type Provider = ProviderInfo
 export type Model = ModelInfo
+/** Command authentication runs on the OpenCode host; stdout never reaches UI. */
+export type ProviderCommandMethod = { type: 'command'; id: string; label: string }
+export type ProviderCommandStatus =
+  | { status: 'pending' | 'complete' | 'expired' }
+  | { status: 'failed'; message: string }
+export type ProviderCommandAttempt = {
+  status: () => Promise<ProviderCommandStatus>
+  cancel: () => Promise<void>
+}
 export type McpServerStatus = McpServer
 /** Version-control facts about a directory the UI shows (current and default branch). */
 export type Vcs = { branch?: string; defaultBranch?: string }

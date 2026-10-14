@@ -614,6 +614,39 @@ class OpencodeService {
     return resolved ? this.getScopedSdkClient(resolved) : this.client
   }
 
+  /** Start only the integration's registered command, never a UI-supplied shell. */
+  async connectProviderCommand(input: {
+    integrationID: string
+    methodID: string
+    label?: string
+    directory?: string | null
+  }): Promise<import('./model').ProviderCommandAttempt> {
+    const runtimeKey = getRuntimeKey()
+    const client = this.clientFor(input.directory)
+    const assertOwner = () => {
+      if (runtimeKey !== getRuntimeKey()) throw new Error('Provider sign-in stopped because the OpenCode host changed.')
+    }
+    assertOwner()
+    const { data: attempt } = await client.integration.command.connect({ integrationID: input.integrationID, methodID: input.methodID, label: input.label?.trim() || undefined })
+    const request = { integrationID: input.integrationID, attemptID: attempt.attemptID }
+    const controller = new AbortController()
+    return {
+      status: async () => {
+        assertOwner()
+        const { data } = await client.integration.command.status(request, { signal: controller.signal })
+        assertOwner()
+        return data.status === 'failed' ? { status: data.status, message: data.message } : { status: data.status }
+      },
+      cancel: async () => {
+        controller.abort()
+        // Never route an old attempt ID to a newly selected host. An attempt
+        // that became unreachable expires on its original OpenCode host.
+        if (runtimeKey !== getRuntimeKey()) return
+        await client.integration.command.cancel(request)
+      },
+    }
+  }
+
   private resolveDirectory(directory?: string | null): string | undefined {
     return this.normalizeCandidatePath(directory) ?? this.currentDirectory
   }

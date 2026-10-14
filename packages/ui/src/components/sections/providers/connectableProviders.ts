@@ -35,16 +35,18 @@ const POPULAR_IDS = new Set(POPULAR_PROVIDERS.map((provider) => provider.id));
  * configured or connected right now, so the candidates are the integrations,
  * minus those with any connection, MCP OAuth registrations (`mcp_*`), web
  * search providers (their keys live in Settings → Web search) and providers
- * OpenCode already lists. Sorted by name.
+ * OpenCode already lists. Sorted by name. A chosen provider stays until its
+ * sign-in flow finishes: the registry can update before command/OAuth status.
  */
 export const listConnectableProviders = (
   catalog: IntegrationCatalog,
   listedProviderIds: ReadonlySet<string>,
+  chosenProviderId?: string,
 ): ConnectableProvider[] => catalog.integrations
-  .filter((integration) => integration.connections.length === 0
-    && !integration.id.startsWith('mcp_')
+  .filter((integration) => !integration.id.startsWith('mcp_')
     && !catalog.webSearchIds?.has(integration.id)
-    && !listedProviderIds.has(integration.id))
+    && (integration.id === chosenProviderId
+      || (integration.connections.length === 0 && !listedProviderIds.has(integration.id))))
   .map((integration) => ({ id: integration.id, name: integration.name || integration.id }))
   .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 
