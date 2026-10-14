@@ -88,7 +88,7 @@ test('the real oxlint command reports a wholly ignored source file without break
   try {
     const fixture = path.join(directory, 'fixture.ts');
     writeFileSync(fixture, 'export const fixture = 1;\n');
-    const result = spawnSync('bunx', ['oxlint', '-c', path.join(repository, 'oxlint.config.ts'), '-f', 'json', path.relative(repository, fixture)], {
+    const result = spawnSync('bunx', ['oxlint', '-c', path.join(repository, 'oxlint.anti-slop.config.ts'), '-f', 'json', path.relative(repository, fixture)], {
       cwd: repository, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
     });
     assert.match(result.stdout, /^No files found to lint\./);

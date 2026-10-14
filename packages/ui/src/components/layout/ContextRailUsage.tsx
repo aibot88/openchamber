@@ -1,6 +1,5 @@
 import React from 'react';
 
-import { DEFAULT_CONTEXT_LIMIT } from '@/components/chat/work-status/contextUsage';
 import { useSubagentCostRollup } from '@/components/chat/work-status/useSubagentCostRollup';
 import { useContextWindowLimits } from '@/hooks/useContextWindowLimits';
 import { useI18n } from '@/lib/i18n';
@@ -35,7 +34,7 @@ const useCurrentContextReading = () => {
   const directory = useSessionUIStore((state) => state.currentSessionDirectory) ?? undefined;
   const fill = useSessionMessagesSelector(sessionId ?? '', directory, selectContextFill, isSameContextFill);
   const { context } = useContextWindowLimits(sessionId, directory);
-  const limit = context > 0 ? context : DEFAULT_CONTEXT_LIMIT;
+  const limit = Number.isFinite(context) && context > 0 ? context : null;
   return { sessionId, fill, limit };
 };
 
@@ -54,11 +53,12 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
  * Rail icon for the Context surface: an outline ring whose arc is the share of
  * the context window in use. Drawn in the button's own colour, so it follows
  * the rail's idle, hover and active states like the other icons. An empty
- * track means nothing is measured yet, or a compaction made the fill unknown.
+ * track means nothing is measured yet, the model reports no context limit, or a
+ * compaction made the fill unknown.
  */
 export const ContextUsageRingIcon: React.FC<{ className?: string }> = ({ className }) => {
   const { fill, limit } = useCurrentContextReading();
-  const percent = fill?.state === 'measured' ? Math.min(100, (fill.totalTokens / limit) * 100) : 0;
+  const percent = fill?.state === 'measured' && limit !== null ? Math.min(100, (fill.totalTokens / limit) * 100) : 0;
 
   return (
     <svg viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`} className={cn('shrink-0', className)} aria-hidden="true">
@@ -104,7 +104,9 @@ export const ContextRailTooltipDetails: React.FC = () => {
     fill.state === 'measured'
       ? t('contextUsage.tooltip.usedTokens', { tokens: formatTokens(fill.totalTokens) })
       : t('contextUsage.compacted.description'),
-    t('contextUsage.tooltip.contextLimit', { tokens: formatTokens(limit) }),
+    limit !== null
+      ? t('contextUsage.tooltip.contextLimit', { tokens: formatTokens(limit) })
+      : t('settings.providers.page.models.tokenBadge.unknownContext'),
     ...(totalCost !== null && totalCost > 0 ? [t('contextUsage.tooltip.cost', { cost: formatMoney(totalCost) })] : []),
   ];
 
