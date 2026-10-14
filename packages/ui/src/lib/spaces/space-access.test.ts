@@ -49,6 +49,10 @@ describe('spaceAccessNoticeOf', () => {
 
   test('warns about a running space with no model key, an opened domain not counting and a login counting', () => {
     expect(spaceAccessNoticeOf(entry({ grants: [registry] }))).toEqual({ kind: 'no_model' });
+    // A provider of the user's own is a model like any other.
+    const custom = { kind: 'custom' as const, id: 'ollama-local', provider: 'ollama-local', url: 'http://gatekeeper:8080/model/ollama-local' };
+    expect(spaceAccessNoticeOf(entry({ grants: [registry, custom] }))).toBeNull();
+    expect(spaceAccessNoticeOf(entry({ grants: [custom], access: 'needs_access', needsAccess: ['ollama-local'] }))).toEqual({ kind: 'needs_again', providers: ['ollama-local'] });
     expect(spaceAccessNoticeOf(entry({ grants: [openaiLogin] }))).toBeNull();
     expect(spaceAccessNoticeOf(entry({ grants: [openaiLogin], access: 'needs_access', needsAccess: ['openai'] }))).toEqual({ kind: 'needs_again', providers: ['openai'] });
     expect(spaceAccessNoticeOf(entry({ grants: [], access: null }))).toEqual({ kind: 'no_model' });

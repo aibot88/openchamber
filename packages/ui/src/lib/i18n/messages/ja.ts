@@ -877,7 +877,7 @@ export const dict: Record<I18nKey, string> = {
   'sessions.sidebar.group.worktreeRemoving': 'ワークツリーを削除しています…',
   'sessions.sidebar.project.folderMissing': 'プロジェクトフォルダーが見つからないか、利用できません',
   'sessions.sidebar.group.space': '隔離スペース',
-  'sessions.sidebar.group.spaceStale': 'スペースが応答していません。セッションが古い可能性があります。',
+  'sessions.sidebar.group.spaceStale': 'このスペースのセッションは一部のみ表示されています。',
   'sessions.sidebar.grouping.spaceUnnamed': '隔離スペース',
   'sessions.sidebar.sessionDialogs.worktree.label': 'ワークツリー',
   'sessions.sidebar.sessionDialogs.worktree.pathUnavailable': 'ワークツリーパスは利用できません。',

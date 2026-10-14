@@ -128,6 +128,7 @@ const ModelRow: React.FC<ModelRowProps> = ({ entry, provider, initiallyOpen, log
   const state = (() => {
     if (access === 'granted') {
       if (grant?.kind === 'login') return <span className="text-muted-foreground">{t('spaces.access.model.grantedLogin', { name: loginName })}</span>;
+      if (grant?.kind === 'custom') return <span className="text-muted-foreground">{t(provider.custom?.hasKey ? 'spaces.access.model.grantedCustom' : 'spaces.access.model.granted')}</span>;
       if (grant?.kind === 'model' && grant.source.kind === 'env') return <span className="text-muted-foreground">{t('spaces.access.model.grantedFromEnv', { name: grant.source.name })}</span>;
       return <span className="text-muted-foreground">{t('spaces.access.model.granted')}</span>;
     }
@@ -150,22 +151,22 @@ const ModelRow: React.FC<ModelRowProps> = ({ entry, provider, initiallyOpen, log
           <div className="typography-meta break-words">{state}</div>
         </div>
         {!open ? (
-          <Button variant="outline" size="xs" className="shrink-0" onClick={() => setOpen(true)} disabled={entry.state !== 'running' || (!provider.key && !offer)}>
-            {access === 'granted' ? t(grant?.kind === 'login' ? 'spaces.access.model.changeLogin' : 'spaces.access.model.change') : t('spaces.access.model.give')}
+          <Button variant="outline" size="xs" className="shrink-0" onClick={() => setOpen(true)} disabled={entry.state !== 'running' || (!provider.key && !offer && !provider.custom) || Boolean(provider.custom?.blocked)}>
+            {access === 'granted' ? t(grant?.kind === 'custom' ? 'spaces.access.model.renewCustom' : grant?.kind === 'login' ? 'spaces.access.model.changeLogin' : 'spaces.access.model.change') : t('spaces.access.model.give')}
           </Button>
         ) : null}
       </div>
-      {open ? (
+      {open || provider.custom?.blocked ? (
         <div className="space-y-2 ps-3">
-          <ModelKeySource provider={provider} login={offer} choice={choice} onChange={(change) => { touched.current = true; setChoice((current) => ({ ...current, ...change })); }} />
+          <ModelKeySource provider={provider} login={offer} choice={choice} onChange={(change) => { touched.current = true; setChoice((current) => ({ ...current, ...change })); }} machine={entry.machine} />
           {error ? <p className="typography-meta text-status-error">{error}</p> : null}
-          <div className="flex gap-2">
-            <Button size="xs" onClick={() => void give()} disabled={giving || (!provider.key && !offer) || !isAccessChoiceComplete(provider, choice)} className="gap-1.5">
+          {open ? <div className="flex gap-2">
+            <Button size="xs" onClick={() => void give()} disabled={giving || (!provider.key && !offer && !provider.custom) || !isAccessChoiceComplete(provider, choice)} className="gap-1.5">
               {giving ? <Icon name="loader-4" className="h-3 w-3 animate-spin" /> : null}
-              {t(choice.source === 'login' ? 'spaces.access.model.submitLogin' : 'spaces.access.model.submit')}
+              {t(choice.source === 'login' || provider.custom ? 'spaces.access.model.submitLogin' : 'spaces.access.model.submit')}
             </Button>
             <Button variant="ghost" size="xs" onClick={() => { setOpen(false); setError(null); }} disabled={giving}>{t('spaces.create.cancel')}</Button>
-          </div>
+          </div> : null}
         </div>
       ) : null}
     </div>

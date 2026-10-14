@@ -1744,6 +1744,124 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
     [listActive, toTimelineEntries, pinnedBucket],
   );
 
+  /**
+   * A worktree's or a space's header: the swipe row with its chevron, icon
+   * and label, and for a space its state line. The tree puts its sessions
+   * under it; the timeline shows it only for a space without chats.
+   */
+  const renderBucketHeader = (node: ProjectNode, bucket: WorktreeBucket, removing: boolean, activeWorktreePath: string | null): React.ReactNode => {
+    const worktreeExpanded = isWorktreeExpanded(node, bucket);
+    const bucketEmpty = bucket.sessions.length === 0;
+    const isActiveWt = activeWorktreePath === bucket.path;
+    return (
+      <>
+        <MobileSwipeActionsRow
+          // A space's swipe actions are its grant dialog and its actions sheet, where a worktree's is its deletion.
+          actionsWidth={bucket.space ? 96 : 48}
+          revealed={revealedRowId === `wt:${bucket.key}`}
+          onRevealedChange={(nextRevealed) => handleRowKeyRevealedChange(`wt:${bucket.key}`, nextRevealed)}
+          actions={bucket.space ? (
+            <>
+            <button
+              type="button"
+              tabIndex={revealedRowId === `wt:${bucket.key}` ? 0 : -1}
+              className="flex flex-1 items-center justify-center text-foreground transition-colors active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              aria-label={t('spaces.group.access.giveAria', { label: bucket.label })}
+              onClick={() => {
+                setRevealedRowId(null);
+                if (bucket.space) useSpacesStore.getState().openAccessDialog(bucket.space.id);
+              }}
+              style={{ touchAction: 'manipulation' }}
+            >
+              <Icon name="key" className="size-[18px]" />
+            </button>
+            <button
+              type="button"
+              tabIndex={revealedRowId === `wt:${bucket.key}` ? 0 : -1}
+              className="flex flex-1 items-center justify-center text-foreground transition-colors active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              aria-label={t('spaces.actions.menuAria', { label: bucket.label })}
+              onClick={() => {
+                setRevealedRowId(null);
+                if (bucket.space) useSpacesStore.getState().openActionsSheet(bucket.space.id);
+              }}
+              style={{ touchAction: 'manipulation' }}
+            >
+              <Icon name="more-2" className="size-[18px]" />
+            </button>
+            </>
+          ) : bucket.worktree && !removing ? (
+            <button
+              type="button"
+              tabIndex={revealedRowId === `wt:${bucket.key}` ? 0 : -1}
+              className="flex flex-1 items-center justify-center text-[var(--status-error)] transition-colors active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-destructive"
+              aria-label={t('mobile.projectEdit.deleteWorktreeAria', { label: bucket.label })}
+              onClick={() => {
+                setRevealedRowId(null);
+                if (bucket.worktree) {
+                  setWorktreeToDelete({ project: node.project, worktree: bucket.worktree });
+                }
+              }}
+              style={{ touchAction: 'manipulation' }}
+            >
+              <RiDeleteBinLine className="size-[18px]" />
+            </button>
+          ) : null}
+        >
+        <button
+          type="button"
+          className="flex min-h-10 w-full items-center gap-0.5 py-1 pe-3 text-start transition-colors hover:bg-interactive-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+          onClick={() => {
+            if (revealedRowId) {
+              handleRowKeyRevealedChange(revealedRowId, false);
+              return;
+            }
+            // An empty worktree has nothing to show or hide.
+            if (bucketEmpty) return;
+            toggleWorktree(node.project.id, bucket.key, worktreeExpanded);
+          }}
+          aria-expanded={bucketEmpty ? undefined : worktreeExpanded}
+          aria-label={
+            bucketEmpty
+              ? bucket.label
+              : worktreeExpanded
+                ? t('sessions.sidebar.group.collapseAria', { label: bucket.label })
+                : t('sessions.sidebar.group.expandAria', { label: bucket.label })
+          }
+          style={{ paddingInlineStart: treeRowLeft(0), touchAction: 'manipulation' }}
+        >
+          {/* The desktop tree's folder row: chevron, then a
+              12px icon in the 14px slot with 2px gaps, so the
+              medium-weight label starts where the titles of
+              its sessions, one level deeper, start. */}
+          {bucketEmpty
+            ? <span aria-hidden className="size-3.5 shrink-0" />
+            : <FileTreeChevron expanded={worktreeExpanded} />}
+          {removing ? (
+            <span className="inline-flex size-3.5 shrink-0 items-center justify-center text-muted-foreground" role="status" aria-label={t('sessions.sidebar.group.worktreeRemoving')}>
+              <Icon name="loader-4" className="size-3.5 animate-spin" />
+            </span>
+          ) : (
+            <Icon
+              name={bucket.space ? 'box-3' : 'git-branch'}
+              className={cn(
+                'mx-px size-3 shrink-0',
+                isActiveWt ? 'text-primary' : 'text-muted-foreground',
+              )}
+            />
+          )}
+          <span className="block min-w-0 flex-1 truncate typography-ui-label font-medium text-foreground">
+            {bucket.label}
+          </span>
+          {isActiveWt ? (
+            <ActiveDot ariaLabel={t('mobile.sessions.activeWorktreeAria')} />
+          ) : null}
+        </button>
+        </MobileSwipeActionsRow>
+        {bucket.space ? <div className="pb-1 pe-3" style={{ paddingInlineStart: treeTextLeft(1) }}><SpaceGroupStatus spaceId={bucket.space.id} /></div> : null}
+      </>
+    );
+  };
+
   /** Timeline rows of one list, seven at a time, with Show more / Show fewer. */
   const renderTimelineRows = (listKey: string, entries: readonly TimelineEntry[], showProject: boolean) => {
     const visibleCount = visibleCountByBucket.get(listKey) ?? SESSIONS_PER_BUCKET;
@@ -2238,6 +2356,12 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
 
                     <MobileDisclosure open={projectExpanded}>{() => timelineActive ? (
                       <div className="pb-2">
+                        {/* A space without chats has no timeline row, so its header
+                            stands in for it, with its state, until its first chat;
+                            not before the sessions loaded, when every space looks empty. */}
+                        {(hasLoadedGlobalSessions ? buckets : []).filter((bucket) => bucket.space && bucket.sessions.length === 0).map((bucket) => (
+                          <div key={bucket.key} className="mt-1.5">{renderBucketHeader(node, bucket, false, activeWorktreePath)}</div>
+                        ))}
                         {renderTimelineRows(`${node.project.id}::timeline`, timelineEntriesByProject.get(node.project.id) ?? [], false)}
                       </div>
                     ) : (
@@ -2255,117 +2379,13 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
                                 : null}
                               {worktreeBuckets.map((bucket) => {
                                 const worktreeExpanded = isWorktreeExpanded(node, bucket);
-                                const bucketEmpty = bucket.sessions.length === 0;
-                                const isActiveWt = activeWorktreePath === bucket.path;
                                 return (
                                   <WorktreeRemovalScope key={bucket.key} path={bucket.worktree?.path ?? null}>
                                   {(removing) => (
                                   // A small gap opens each worktree, as on desktop, so its
                                   // sessions read as a group of their own.
                                   <div className={cn('mt-1.5', removing && 'opacity-60')} aria-busy={removing || undefined}>
-                                    <MobileSwipeActionsRow
-                                      // A space's swipe actions are its grant dialog and its actions sheet, where a worktree's is its deletion.
-                                      actionsWidth={bucket.space ? 96 : 48}
-                                      revealed={revealedRowId === `wt:${bucket.key}`}
-                                      onRevealedChange={(nextRevealed) => handleRowKeyRevealedChange(`wt:${bucket.key}`, nextRevealed)}
-                                      actions={bucket.space ? (
-                                        <>
-                                        <button
-                                          type="button"
-                                          tabIndex={revealedRowId === `wt:${bucket.key}` ? 0 : -1}
-                                          className="flex flex-1 items-center justify-center text-foreground transition-colors active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-                                          aria-label={t('spaces.group.access.giveAria', { label: bucket.label })}
-                                          onClick={() => {
-                                            setRevealedRowId(null);
-                                            if (bucket.space) useSpacesStore.getState().openAccessDialog(bucket.space.id);
-                                          }}
-                                          style={{ touchAction: 'manipulation' }}
-                                        >
-                                          <Icon name="key" className="size-[18px]" />
-                                        </button>
-                                        <button
-                                          type="button"
-                                          tabIndex={revealedRowId === `wt:${bucket.key}` ? 0 : -1}
-                                          className="flex flex-1 items-center justify-center text-foreground transition-colors active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-                                          aria-label={t('spaces.actions.menuAria', { label: bucket.label })}
-                                          onClick={() => {
-                                            setRevealedRowId(null);
-                                            if (bucket.space) useSpacesStore.getState().openActionsSheet(bucket.space.id);
-                                          }}
-                                          style={{ touchAction: 'manipulation' }}
-                                        >
-                                          <Icon name="more-2" className="size-[18px]" />
-                                        </button>
-                                        </>
-                                      ) : bucket.worktree && !removing ? (
-                                        <button
-                                          type="button"
-                                          tabIndex={revealedRowId === `wt:${bucket.key}` ? 0 : -1}
-                                          className="flex flex-1 items-center justify-center text-[var(--status-error)] transition-colors active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-destructive"
-                                          aria-label={t('mobile.projectEdit.deleteWorktreeAria', { label: bucket.label })}
-                                          onClick={() => {
-                                            setRevealedRowId(null);
-                                            if (bucket.worktree) {
-                                              setWorktreeToDelete({ project: node.project, worktree: bucket.worktree });
-                                            }
-                                          }}
-                                          style={{ touchAction: 'manipulation' }}
-                                        >
-                                          <RiDeleteBinLine className="size-[18px]" />
-                                        </button>
-                                      ) : null}
-                                    >
-                                    <button
-                                      type="button"
-                                      className="flex min-h-10 w-full items-center gap-0.5 py-1 pe-3 text-start transition-colors hover:bg-interactive-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                                      onClick={() => {
-                                        if (revealedRowId) {
-                                          handleRowKeyRevealedChange(revealedRowId, false);
-                                          return;
-                                        }
-                                        // An empty worktree has nothing to show or hide.
-                                        if (bucketEmpty) return;
-                                        toggleWorktree(node.project.id, bucket.key, worktreeExpanded);
-                                      }}
-                                      aria-expanded={bucketEmpty ? undefined : worktreeExpanded}
-                                      aria-label={
-                                        bucketEmpty
-                                          ? bucket.label
-                                          : worktreeExpanded
-                                            ? t('sessions.sidebar.group.collapseAria', { label: bucket.label })
-                                            : t('sessions.sidebar.group.expandAria', { label: bucket.label })
-                                      }
-                                      style={{ paddingInlineStart: treeRowLeft(0), touchAction: 'manipulation' }}
-                                    >
-                                      {/* The desktop tree's folder row: chevron, then a
-                                          12px icon in the 14px slot with 2px gaps, so the
-                                          medium-weight label starts where the titles of
-                                          its sessions, one level deeper, start. */}
-                                      {bucketEmpty
-                                        ? <span aria-hidden className="size-3.5 shrink-0" />
-                                        : <FileTreeChevron expanded={worktreeExpanded} />}
-                                      {removing ? (
-                                        <span className="inline-flex size-3.5 shrink-0 items-center justify-center text-muted-foreground" role="status" aria-label={t('sessions.sidebar.group.worktreeRemoving')}>
-                                          <Icon name="loader-4" className="size-3.5 animate-spin" />
-                                        </span>
-                                      ) : (
-                                        <Icon
-                                          name={bucket.space ? 'box-3' : 'git-branch'}
-                                          className={cn(
-                                            'mx-px size-3 shrink-0',
-                                            isActiveWt ? 'text-primary' : 'text-muted-foreground',
-                                          )}
-                                        />
-                                      )}
-                                      <span className="block min-w-0 flex-1 truncate typography-ui-label font-medium text-foreground">
-                                        {bucket.label}
-                                      </span>
-                                      {isActiveWt ? (
-                                        <ActiveDot ariaLabel={t('mobile.sessions.activeWorktreeAria')} />
-                                      ) : null}
-                                    </button>
-                                    </MobileSwipeActionsRow>
-                                    {bucket.space ? <div className="pb-1 pe-3" style={{ paddingInlineStart: treeTextLeft(1) }}><SpaceGroupStatus spaceId={bucket.space.id} /></div> : null}
+                                    {renderBucketHeader(node, bucket, removing, activeWorktreePath)}
                                     <MobileDisclosure open={worktreeExpanded}>
                                       {() => renderBucketSessions(`${node.project.id}::${bucket.key}`, bucket, 1)}
                                     </MobileDisclosure>

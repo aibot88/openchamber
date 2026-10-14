@@ -310,6 +310,12 @@ all / Expand all.
   (`timelineProjectContainerKey`); collapsing it, from its header or Collapse
   all, forgets that state, so expanding starts from 7 again. A project without
   sessions shows its load status, or nothing under its header.
+- An isolated space without chats has no session row, so its group header,
+  the same row the Tree draws with its state line and menu, sits first under
+  the project until its first chat; it hides nothing and is not dragged. Search
+  leaves it out. While the space's chats load it waits, and a failed load shows
+  the Tree's failure line under it. The phone's timeline shows the space's bucket header the same
+  way, through the header the phone tree uses.
 - Timeline rows carry `renderContext: 'timeline'` (under a project) or
   `'timeline-mixed'` (Pinned and In work), depth 0 and empty children. They
   never expand, show no chevron, no folders and no worktree groups. Folders are

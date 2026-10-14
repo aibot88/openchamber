@@ -877,7 +877,7 @@ export const dict: Record<I18nKey, string> = {
   'sessions.sidebar.group.worktreeRemoving': 'Usuwanie drzewa pracy…',
   'sessions.sidebar.project.folderMissing': 'Folder projektu nie istnieje lub jest niedostępny',
   'sessions.sidebar.group.space': 'Izolowana przestrzeń',
-  'sessions.sidebar.group.spaceStale': 'Przestrzeń nie odpowiada. Sesje mogą być nieaktualne.',
+  'sessions.sidebar.group.spaceStale': 'Nie wszystkie sesje tej przestrzeni są widoczne.',
   'sessions.sidebar.grouping.spaceUnnamed': 'Izolowana przestrzeń',
   'sessions.sidebar.sessionDialogs.worktree.label': 'Drzewo pracy',
   'sessions.sidebar.sessionDialogs.worktree.pathUnavailable': 'Ścieżka drzewa pracy niedostępna.',

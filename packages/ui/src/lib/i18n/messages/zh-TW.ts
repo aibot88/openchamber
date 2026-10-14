@@ -897,7 +897,7 @@ export const dict: Record<I18nKey, string> = {
   'sessions.sidebar.group.worktreeRemoving': '正在移除 worktree…',
   'sessions.sidebar.project.folderMissing': '專案資料夾不存在或無法使用',
   'sessions.sidebar.group.space': '隔離空間',
-  'sessions.sidebar.group.spaceStale': '該空間沒有回應。工作階段可能已過時。',
+  'sessions.sidebar.group.spaceStale': '未顯示此空間的所有工作階段。',
   'sessions.sidebar.grouping.spaceUnnamed': '隔離空間',
   'sessions.sidebar.sessionDialogs.worktree.label': 'worktree',
   'sessions.sidebar.sessionDialogs.worktree.pathUnavailable': 'worktree 路徑無法使用。',

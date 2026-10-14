@@ -84,14 +84,17 @@ const refusalFromList = (entry: SpaceEntry, providerId: string): SpaceModelRefus
  * its directory; a session by its directory.
  */
 export const spaceModelRefusal = (target: SpaceTarget, providerId: string): SpaceModelRefusal | null => {
-  const grantable = isSpaceGrantableProvider(providerId);
-  const domain = UNGRANTABLE_PROVIDER_DOMAINS.get(providerId);
-  if (!grantable && !domain) return null;
   const space = spaceOfTarget(target);
   if (!space) return null;
   const { spaceId, directory } = space;
-  const { journey, creationAccess } = useSpacesStore.getState();
+  const { journey, creationAccess, customProviders } = useSpacesStore.getState();
   const entry = journey?.get(spaceId);
+  // A provider of the user's own is grantable when the host lists it for the space's project;
+  // a project not read yet refuses nothing, as the rule above says.
+  const custom = entry?.projectDirectory ? customProviders.get(entry.projectDirectory)?.some((provider) => provider.id === providerId) === true : false;
+  const grantable = custom || isSpaceGrantableProvider(providerId);
+  const domain = UNGRANTABLE_PROVIDER_DOMAINS.get(providerId);
+  if (!grantable && !domain) return null;
   if (!grantable && domain !== undefined) {
     // A space that is not listed yet, or whose network the host could not read, refuses nothing.
     if (entry?.network?.mode !== 'allowlist' || entry.network.domains.includes(domain)) return null;

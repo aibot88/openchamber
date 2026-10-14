@@ -868,7 +868,7 @@ export const dict = {
   'sessions.sidebar.group.worktreeRemoving': 'Worktree wordt verwijderd…',
   'sessions.sidebar.project.folderMissing': 'Projectmap ontbreekt of is niet beschikbaar',
   'sessions.sidebar.group.space': 'Geïsoleerde ruimte',
-  'sessions.sidebar.group.spaceStale': 'De ruimte reageert niet. Sessies zijn mogelijk verouderd.',
+  'sessions.sidebar.group.spaceStale': 'Niet alle sessies van deze ruimte worden getoond.',
   'sessions.sidebar.grouping.spaceUnnamed': 'Geïsoleerde ruimte',
   'sessions.sidebar.sessionDialogs.worktree.label': 'Worktree',
   'sessions.sidebar.sessionDialogs.worktree.pathUnavailable': 'Worktreepad niet beschikbaar.',

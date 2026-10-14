@@ -786,7 +786,7 @@ export const dict = {
   'sessions.sidebar.group.worktreeRemoving': 'Worktree kaldırılıyor…',
   'sessions.sidebar.project.folderMissing': 'Proje klasörü bulunamıyor veya kullanılamıyor',
   'sessions.sidebar.group.space': 'Yalıtılmış alan',
-  'sessions.sidebar.group.spaceStale': 'Alan yanıt vermiyor. Oturumlar güncel olmayabilir.',
+  'sessions.sidebar.group.spaceStale': 'Bu alanın tüm oturumları gösterilmiyor.',
   'sessions.sidebar.grouping.spaceUnnamed': 'Yalıtılmış alan',
   'sessions.sidebar.sessionDialogs.worktree.label': 'Worktree',
   'sessions.sidebar.sessionDialogs.worktree.pathUnavailable': 'Worktree yolu kullanılamıyor.',

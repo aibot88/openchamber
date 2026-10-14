@@ -43,6 +43,19 @@ describe('the provider configuration inside a space', () => {
     await expect(opencode.writeProviderConfig(ID, GRANTS)).rejects.toMatchObject({ code: 'space_setup_failed', message: expect.stringContaining('Read-only file system') });
   });
 
+  it('writes a custom provider as the host defines it, at the window, and leaves one the host cannot say now out', () => {
+    const ollama = { kind: 'custom', id: 'ollama-local', provider: 'ollama-local' };
+    const definitions = new Map([['ollama-local', { name: 'Ollama (local)', package: 'aisdk:@ai-sdk/openai-compatible', baseURL: 'http://localhost:11434/v1', headers: {}, models: { 'qwen3:8b': { modelID: 'qwen3:8b', name: 'Qwen3 8B' } }, key: null }]]);
+    expect(buildProviderConfig([GRANTS[0], ollama], definitions)).toEqual({
+      $schema: 'https://opencode.ai/config.json',
+      provider: { anthropic: { options: { baseURL: 'http://gatekeeper:8080/model/anthropic', apiKey: WINDOW_PLACEHOLDER_KEY } } },
+      providers: { 'ollama-local': { name: 'Ollama (local)', package: 'aisdk:@ai-sdk/openai-compatible', settings: { baseURL: 'http://gatekeeper:8080/model/ollama-local', apiKey: WINDOW_PLACEHOLDER_KEY }, models: { 'qwen3:8b': { modelID: 'qwen3:8b', name: 'Qwen3 8B' } } } },
+    });
+    // The host's address stays on the host; the space sees the window and nothing behind it.
+    expect(JSON.stringify(buildProviderConfig([ollama], definitions))).not.toContain('11434');
+    expect(buildProviderConfig([ollama])).toEqual({ $schema: 'https://opencode.ai/config.json', provider: {} });
+  });
+
   it('points a provider with a login grant at the window over HTTP, with no placeholder key', () => {
     expect(buildProviderConfig([{ kind: 'login', id: 'openai', provider: 'openai', method: 'chatgpt-browser' }]).provider).toEqual({
       openai: { options: { baseURL: 'http://gatekeeper:8080/model/openai', transport: 'http' } },

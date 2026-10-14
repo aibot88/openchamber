@@ -773,6 +773,24 @@ export const buildSessionSidebarRowModel = (args: SessionSidebarRowModelArgs): S
       push({ kind: 'project-header', key: `project:${projectId}:header`, estimateSize: HEADER_ESTIMATE, section, collapsed, forceExpanded: search });
       stickyHeaders.push(Object.freeze({ rowIndex, kind: 'project', id: projectId }));
       if (collapsed) continue;
+      // A space without chats has no row of its own here, so its group header
+      // stands in for it, with the space's state, until its first chat
+      // (journey step 2: the space shows under its project at once).
+      if (!search) {
+        for (const group of section.groups) {
+          if (!group.space || group.sessions.length > 0) continue;
+          const groupKey = `${projectId}:${group.id}`;
+          // While its chats load the space may well have some; a failed load
+          // shows its line, as in the Tree, never an empty space.
+          const status = args.groupStatusByKey.get(groupKey);
+          if (status?.state === 'loading') continue;
+          const empty = (!status || status.state === 'ready')
+            && getSessionFolderScopes(group).every(({ scopeKey }) => (args.foldersMap[scopeKey] ?? EMPTY_FOLDERS).length === 0);
+          // Forced open: it hides nothing and, like every List row, is not dragged.
+          push({ kind: 'group-header', key: `${groupKey}:header`, estimateSize: HEADER_ESTIMATE, group, groupKey, projectId, collapsed: false, forceExpanded: true, empty, allSessions: Object.freeze([]) });
+          if (status && status.state !== 'ready') push({ kind: 'status', key: `${groupKey}:status`, estimateSize: STATUS_ESTIMATE, status, group, groupKey, flat: true });
+        }
+      }
       if (items.length > 0) {
         appendRevealedItems(items, timelineProjectContainerKey(projectId), 'timeline', SESSIONS_INITIAL_LIMIT, SESSIONS_INCREMENT);
         continue;

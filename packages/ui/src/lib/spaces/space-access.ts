@@ -33,7 +33,7 @@ type SpaceAccessNotice =
 export const spaceAccessNoticeOf = (entry: SpaceEntry | undefined): SpaceAccessNotice | null => {
   if (!entry || entry.state !== 'running') return null;
   if (entry.access === 'unknown') return { kind: 'unknown' };
-  const models = entry.grants.filter((grant) => grant.kind === 'model' || grant.kind === 'login');
+  const models = entry.grants.filter((grant) => grant.kind === 'model' || grant.kind === 'login' || grant.kind === 'custom');
   // With the open internet the space reaches opencode.ai, whose free models answer with no key,
   // so "no access to any model" would be false there; a model that does need a key is refused
   // at send time, by name. With an allowlist no model answers without a grant, and a network the

@@ -51,6 +51,7 @@ import { FolderDeleteConfirmDialog } from '../shell/ConfirmDialogs';
 import { getSessionFolderOwnerKey } from '../sessions/sessionFolderIdentity';
 import { SpaceActionsMenu } from '@/components/session/spaces/SpaceActions';
 import { SpaceGroupStatus } from '@/components/session/spaces/SpaceGroupStatus';
+import { spaceLineSaysState } from '@/lib/spaces/space-repair';
 import { useSpaceTakesNoNewSession, useSpacesStore } from '@/lib/spaces/spaces-store';
 import { useShiftKeyHeld } from '@/hooks/useShiftKeyHeld';
 import type { WorktreeMetadata } from '@/types/worktree';
@@ -321,6 +322,10 @@ function SessionGroupSectionBase(props: SessionGroupSectionProps): React.ReactNo
   const { t } = useI18n();
   const openOnBoard = useOpenOnBoard();
   const spaceTakesNoNewSession = useSpaceTakesNoNewSession(props.group.space?.id);
+  const spaceLineSpeaks = useSpacesStore((state) => {
+    const spaceId = props.group.space?.id;
+    return spaceId != null && spaceLineSaysState(state.journey?.get(spaceId), state.spaces.get(spaceId), state.actions.get(spaceId));
+  });
   const {
     group,
     groupKey,
@@ -903,9 +908,10 @@ function SessionGroupSectionBase(props: SessionGroupSectionProps): React.ReactNo
       <Icon name="alert" className="h-3 w-3" />
     </span>
   ) : null;
-  // The space did not answer the host's last read: its last known sessions stand in, and the
-  // user should know they may be old.
-  const spaceStaleIndicator = group.space && group.space.state !== 'complete' ? (
+  // The space did not answer the host's last read in full: its last known sessions stand in, and
+  // the user should know they may be old. Only while the line under the group says nothing, so a
+  // stopped or unreachable space does not get a second warning that reads like a fault.
+  const spaceStaleIndicator = group.space && group.space.state !== 'complete' && !spaceLineSpeaks ? (
     <span
       className="inline-flex flex-shrink-0 items-center text-status-warning"
       title={t('sessions.sidebar.group.spaceStale')}
