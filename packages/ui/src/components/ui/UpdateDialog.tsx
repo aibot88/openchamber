@@ -33,7 +33,8 @@ interface UpdateDialogProps {
   runtimeType?: 'desktop' | 'web' | 'vscode' | 'mobile' | null;
 }
 
-const GITHUB_RELEASES_URL = 'https://github.com/openchamber/openchamber/releases';
+// Desktop builds update from this fork's own releases, tagged fork-v<version>.
+const GITHUB_RELEASES_URL = 'https://github.com/aibot88/openchamber/releases';
 
 type ChangelogSection = {
   version: string;
@@ -132,7 +133,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
   const [webError, setWebError] = useState<string | null>(null);
 
   const releaseUrl = info?.version
-    ? (info.releaseUrl || `${GITHUB_RELEASES_URL}/tag/v${info.version}`)
+    ? (info.releaseUrl || `${GITHUB_RELEASES_URL}/tag/fork-v${info.version}`)
     : GITHUB_RELEASES_URL;
   const mobileUpdateUrl = info?.downloadUrl || releaseUrl;
 

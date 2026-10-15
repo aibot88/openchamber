@@ -47,10 +47,20 @@ describe('checkForUpdates', () => {
     fetchMock = createFetchMock();
     originalFetch = globalThis.fetch;
     globalThis.fetch = fetchMock;
+    process.env.OPENCHAMBER_ALLOW_UPSTREAM_NPM_UPDATE = '1';
   });
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
+    delete process.env.OPENCHAMBER_ALLOW_UPSTREAM_NPM_UPDATE;
+  });
+
+  it('offers no npm update unless upstream npm updates are allowed', async () => {
+    delete process.env.OPENCHAMBER_ALLOW_UPSTREAM_NPM_UPDATE;
+    const result = await checkForUpdates({ currentVersion: '1.9.10' });
+    expect(result.available).toBe(false);
+    expect(result.currentVersion).toBe('1.9.10');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   // --- Scenario: API says update available, npm confirms ---

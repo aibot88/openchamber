@@ -1,0 +1,153 @@
+name: Fork release (macOS arm64)
+
+# Desktop builds of the aibot88/openchamber fork update from this repo's own
+# releases (packages/electron/updater-feed.mjs). Tags use the fork-v prefix so
+# upstream's release.yml, which runs on v* tags, never starts here.
+on:
+  push:
+    tags:
+      - 'fork-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fork-release
+  cancel-in-progress: false
+
+jobs:
+  release-macos-arm64:
+    runs-on: macos-15
+    steps:
+      - name: Require signing secrets
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # An unsigned build cannot auto-update on macOS, so never publish one.
+          missing=()
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            [ -n "${!name}" ] || missing+=("$name")
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::Missing repository secrets: ${missing[*]}. Add them under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Resolve fork version
+        id: version
+        run: |
+          upstream=$(node -p "require('./package.json').version")
+          if [[ "$GITHUB_REF" == refs/tags/fork-v* ]]; then
+            version="${GITHUB_REF#refs/tags/fork-v}"
+          else
+            version=$(node scripts/fork-release-version.mjs)
+          fi
+          echo "upstream=$upstream" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Stamp fork version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: node scripts/bump-version.mjs "$VERSION"
+
+      - name: Get bundled OpenCode CLI version
+        id: opencode_cli_version
+        run: |
+          VERSION=$(node -p "require('./packages/electron/package.json').opencodeCli.version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Cache bundled OpenCode CLI artifact
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: packages/electron/.cache/opencode-cli
+          key: opencode-cli-${{ runner.os }}-arm64-${{ steps.opencode_cli_version.outputs.version }}
+          restore-keys: |
+            opencode-cli-${{ runner.os }}-arm64-
+
+      - name: Install Apple Certificate
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/electron-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          echo "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+      - name: Build Electron app
+        working-directory: packages/electron
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ELECTRON_BUILDER_ARCH: arm64
+        run: |
+          bun run build:web-assets
+          bun run prepare:opencode-cli
+          bun run verify:opencode-cli
+          bun run bundle:main
+          # npmRebuild=false: rebuild native deps for the Electron ABI first.
+          bun run rebuild:native
+          bunx electron-builder --mac --arm64 --publish=never
+          bun run verify:opencode-cli:packaged
+
+      - name: Verify signature + notarization
+        run: |
+          set -euo pipefail
+          APP_PATH=$(find packages/electron/dist/mac-arm64 -maxdepth 2 -name "*.app" -print -quit)
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: .app not found under packages/electron/dist/mac-arm64"
+            ls -la packages/electron/dist/
+            exit 1
+          fi
+          codesign -vv --deep --strict "$APP_PATH"
+          codesign -dv --verbose=4 "$APP_PATH" 2>&1 | grep -q "flags=.*runtime"
+          xcrun stapler validate "$APP_PATH"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          tag_name: fork-v${{ steps.version.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: OpenChamber ${{ steps.version.outputs.version }} (fork)
+          body: Fork build of upstream OpenChamber ${{ steps.version.outputs.upstream }} with this fork's own features, from ${{ github.sha }}.
+          make_latest: 'true'
+          files: |
+            packages/electron/dist/*.dmg
+            packages/electron/dist/*.zip
+            packages/electron/dist/*.blockmap
+            packages/electron/dist/latest-mac.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

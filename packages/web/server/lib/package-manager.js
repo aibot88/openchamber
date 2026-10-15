@@ -775,9 +775,24 @@ async function fetchChangelogNotes(fromVersion, toVersion) {
   return (await fetchUpdateNotes(fromVersion, toVersion, compareVersions)) ?? undefined;
 }
 
+// This fork (aibot88/openchamber) is not published to npm: an npm self-update
+// would replace it with the upstream package and drop the fork's features.
+// Update by pulling the fork and rebuilding instead.
+function upstreamNpmUpdatesAllowed() {
+  return process.env.OPENCHAMBER_ALLOW_UPSTREAM_NPM_UPDATE === '1';
+}
+
 export async function checkForUpdates(options = {}) {
   const currentVersion = options.currentVersion || getCurrentVersion();
   const pm = detectPackageManager();
+  if (!upstreamNpmUpdatesAllowed()) {
+    return {
+      available: false,
+      currentVersion,
+      packageManager: pm,
+      updateCommand: 'openchamber update',
+    };
+  }
   const appType = normalizeAppType(options.appType);
   const platform = normalizePlatform(options.platform);
 
