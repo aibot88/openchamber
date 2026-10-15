@@ -9,6 +9,7 @@ import { routingI18n } from './routing.i18n';
 import { pluginPanelI18n } from './plugin-panel.i18n';
 import { surfacePanelI18n } from './surface-panel.i18n';
 import { fileArtifactsI18n } from './file-artifacts.i18n';
+import { htmlRenderI18n } from './html-render.i18n';
 import { usageStatsI18n } from './usage-stats.i18n';
 import { webSearchI18n } from './websearch.i18n';
 import { isolatedSpacesI18n } from './isolated-spaces.i18n';
@@ -18,6 +19,7 @@ import { environmentI18n } from './environment.i18n';
 import { providersI18n } from './providers.i18n';
 import { mcpGridI18n } from './mcp-grid.i18n';
 import { pluginsGridI18n } from './plugins-grid.i18n';
+import { integrationsCatalogI18n } from './integrations-catalog.i18n';
 
 export const dict: Record<I18nKey, string> = {
   "opencodeCompatibility.bundled": "OpenCode 隨 OpenChamber 一起提供。請更新 OpenChamber 以取得 OpenCode v2。",
@@ -136,6 +138,7 @@ export const dict: Record<I18nKey, string> = {
   ...pluginPanelI18n['zh-TW'],
   ...surfacePanelI18n['zh-TW'],
   ...fileArtifactsI18n['zh-TW'],
+  ...htmlRenderI18n['zh-TW'],
   ...usageStatsI18n['zh-TW'],
   ...webSearchI18n['zh-TW'],
   ...isolatedSpacesI18n['zh-TW'],
@@ -145,6 +148,7 @@ export const dict: Record<I18nKey, string> = {
   ...providersI18n['zh-TW'],
   ...mcpGridI18n['zh-TW'],
   ...pluginsGridI18n['zh-TW'],
+  ...integrationsCatalogI18n['zh-TW'],
   'terminalView.actions.attachSelection': '附加所選輸出',
   'terminalView.actions.copySelection': '複製所選輸出',
   'terminalView.toast.selectionCopied': '已複製輸出',
@@ -227,6 +231,7 @@ export const dict: Record<I18nKey, string> = {
   'mobile.connect.cancelPassword': '使用其他伺服器',
   'mobile.connect.connecting': '連線中...',
   'mobile.connect.notice.unreachable': '無法連線至 {label}。請確認伺服器正在執行。',
+  'mobile.connect.notice.relayLimit': "Relay 拒絕了與 {label} 的連線：裝置或重新連線次數過多。請在另一台裝置上關閉 OpenChamber，或等待一分鐘，然後點按 {label} 重試。",
   'mobile.connect.notice.authExpired': '對 {label} 的存取已過期或被撤銷。請重新登入。',
   'mobile.connect.recovery.description': '無法連線至已儲存的伺服器。請確認它正在執行，或選擇其他執行個體。',
   'mobile.connect.scanQr': '掃描 QR code',
@@ -244,6 +249,7 @@ export const dict: Record<I18nKey, string> = {
   'mobile.connect.splash.connectingTo': '正在連線裝置：',
   'mobile.connect.error.invalidUrl': '該伺服器網址無效。',
   'mobile.connect.error.unreachable': '無法連線至該 OpenChamber 伺服器。',
+  'mobile.connect.error.relayLimit': "Relay 拒絕了連線：裝置或重新連線次數過多。請在另一台裝置上關閉 OpenChamber，或等待一分鐘後重試。",
   'mobile.connect.error.authRequired': '此伺服器需要密碼或用戶端權杖。',
   'mobile.connect.error.passwordFailed': '無法解鎖該伺服器。請檢查密碼。',
   'mobile.instances.addTitle': '新增執行個體',
@@ -537,8 +543,8 @@ export const dict: Record<I18nKey, string> = {
   'sessions.scheduledTasks.editor.enabled.label': '已啟用',
   'sessions.scheduledTasks.editor.goal.label': '作為目標執行',
   'sessions.scheduledTasks.editor.goal.aria': '將此任務作為代理持續推進直至完成的目標執行',
-  'sessions.scheduledTasks.editor.goal.budgetLabel': '權杖預算',
-  'sessions.scheduledTasks.editor.goal.budgetAria': '以權杖預算限制該目標',
+  'sessions.scheduledTasks.editor.goal.budgetLabel': '詞元預算',
+  'sessions.scheduledTasks.editor.goal.budgetAria': '以詞元預算限制該目標',
   'sessions.scheduledTasks.editor.permissionAutoAccept.label': '自動接受權限',
   'sessions.scheduledTasks.editor.permissionAutoAccept.aria': '啟動任務工作階段時啟用權限自動接受',
   'sessions.scheduledTasks.editor.actions.closeAria': '關閉',
@@ -828,6 +834,7 @@ export const dict: Record<I18nKey, string> = {
   'sessions.sidebar.group.pr.status.mergeConflicts': '存在合併衝突',
   'sessions.sidebar.group.pr.status.mergeBlocked': '合併被阻止',
   'sessions.sidebar.group.pr.status.checksFailing': '檢查未通過',
+  'sessions.sidebar.group.pr.status.checksRunning': '檢查進行中',
   'sessions.sidebar.group.issue.status.open': 'Issue 已開啟',
   'sessions.sidebar.group.issue.status.completed': '已完成',
   'sessions.sidebar.group.issue.status.notPlanned': '不計畫處理',
@@ -1477,7 +1484,7 @@ export const dict: Record<I18nKey, string> = {
   'contextRail.surface.pr.description': '建立、審查並合併目前分支的提取請求',
   'contextRail.surface.mr.description': '建立、審查並合併目前分支的合併請求',
   'contextRail.surface.notes.description': '專案的筆記、待辦、計畫與代理記憶',
-  'contextRail.surface.context.description': '工作階段情境與權杖用量',
+  'contextRail.surface.context.description': '工作階段情境與詞元用量',
   'contextRail.surface.browser.description': '內建網頁瀏覽器',
   'contextRail.surface.preview.description': '開發伺服器預覽',
   'contextRail.surface.chat.description': '並排開啟的工作階段',
@@ -2001,7 +2008,7 @@ export const dict: Record<I18nKey, string> = {
   'chat.goal.dialog.titleManage': '工作階段目標',
   'chat.goal.dialog.objectiveLabel': '目標',
   'chat.goal.dialog.objectivePlaceholder': '描述代理應達成並驗證的最終狀態…',
-  'chat.goal.dialog.budgetLabel': '權杖預算',
+  'chat.goal.dialog.budgetLabel': '詞元預算',
   'chat.goal.dialog.evaluationModelLabel': '評估模型',
   'chat.goal.status.active': '進行中',
   'chat.goal.status.evaluating': '評估中…',
@@ -2009,8 +2016,8 @@ export const dict: Record<I18nKey, string> = {
   'chat.goal.status.blocked': '已受阻',
   'chat.goal.status.budgetLimited': '已達預算',
   'chat.goal.status.complete': '已完成',
-  'chat.goal.usage.tokens': '{used} 權杖',
-  'chat.goal.usage.tokensWithBudget': '{used}/{budget} 權杖',
+  'chat.goal.usage.tokens': '{used} 詞元',
+  'chat.goal.usage.tokensWithBudget': '{used}/{budget} 詞元',
   'chat.goal.usage.turns': '{turns} 次續跑',
   'chat.goal.action.pause': '暫停',
   'chat.goal.action.resume': '繼續',
@@ -2249,6 +2256,7 @@ export const dict: Record<I18nKey, string> = {
   'session.newWorktree.toast.worktreeCreatedDescription': '{target} - 正在背景初始化',
   'session.newWorktree.toast.fetchSourceFailed': '無法從遠端擷取 — 已基於本機狀態建立',
   'session.newWorktree.toast.fetchSourceAccess': '無法擷取：需要在「設定儲存庫」中處理此儲存庫的存取權限。已基於本機狀態建立。',
+  'session.newWorktree.toast.branchBackup': '{branch} 現在與遠端一致。先前的提交保留在 {backup} 中。',
   'session.githubIntegration.tabs.pullRequests': 'Pull Requests',
   'session.githubIntegration.validation.branchAlreadyCheckedOut': '該分支已在某個 worktree 中簽出',
   'session.githubIntegration.validation.failed': '驗證失敗',
@@ -2986,6 +2994,7 @@ export const dict: Record<I18nKey, string> = {
   'desktopHostSwitcher.status.authRequired': '需要認證',
   'desktopHostSwitcher.status.wrongService': '服務不符',
   'desktopHostSwitcher.status.unreachable': '無法連線',
+  'desktopHostSwitcher.status.relayLimit': "已達 Relay 限制",
   'desktopHostSwitcher.status.unknown': '未知',
   'desktopHostSwitcher.status.ping': ' · {ms}ms 延遲',
   'desktopHostSwitcher.statusAria': '實例狀態',
@@ -3049,6 +3058,10 @@ export const dict: Record<I18nKey, string> = {
   'desktopHostSwitcher.toast.sshConnected': 'SSH 實例「{host}」已連線',
   'desktopHostSwitcher.toast.sshFailedToConnect': 'SSH 實例「{host}」連線失敗',
   'desktopHostSwitcher.toast.instanceUnreachable': '實例「{host}」無法連線',
+  'desktopHostSwitcher.toast.relayLimit': "Relay 拒絕了與「{host}」的連線：裝置或重新連線次數過多。請在另一台裝置上關閉 OpenChamber，或等待一分鐘後重試。",
+  'relayConnection.limitReached.title': "Relay 拒絕了連線",
+  'relayConnection.limitReached.description': "此實例的裝置或重新連線次數過多。請在另一台裝置上關閉 OpenChamber，或等待一分鐘後重試。",
+  'relayConnection.limitReached.retry': "重試",
   'miniChat.header.newSession': '新會話',
   'miniChat.header.session': '會話',
   'miniChat.header.defaultAgent': '預設 Agent',

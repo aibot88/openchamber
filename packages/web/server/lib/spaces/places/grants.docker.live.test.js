@@ -20,7 +20,7 @@ import { registerOpenCodeProxy } from '../../opencode/proxy.js';
 import { runCommand } from '../run-command.js';
 import { createSpacesHost } from '../host.js';
 import { createHostProviders } from '../host-providers.js';
-import { SPACE_HOME, SPACE_OPENCODE_CONFIG_PATH } from '../layout.js';
+import { LEGACY_SPACE_OPENCODE_CONFIG_PATH, SPACE_HOME, spaceOpenCodeConfigPath } from '../layout.js';
 import { WINDOW_PLACEHOLDER_KEY, loginGrantOf, spaceLoginCredentialId } from '../space-opencode.js';
 import { LIVE_DOCKER_ENABLED, createLiveDockerPlace } from './docker-live-support.js';
 
@@ -87,12 +87,15 @@ describe.skipIf(!LIVE_DOCKER_ENABLED)('grants on a real space: docker (live)', (
     const git = (...args) => runCommand('git', ['-C', project, ...args]);
     await git('init', '-q', '.');
     fs.writeFileSync(path.join(project, 'README.md'), 'A project for the grants live pass.\n');
+    // The custom provider lives in the project's own OpenCode configuration, committed, so the
+    // file travels into the space with the code, where its address, a port nothing listens on,
+    // is what OpenCode inside would use if the host's entry did not win over it. On the host the
+    // address is set again once the stand-in runs; the host reads the file, not the commit.
+    const writeCustomProvider = (baseURL) => fs.writeFileSync(path.join(project, 'opencode.json'), JSON.stringify({ providers: { lighthouse: { name: 'Lighthouse', package: 'aisdk:@ai-sdk/openai-compatible', env: ['LIGHTHOUSE_KEY'], settings: { baseURL }, headers: { 'x-team': CUSTOM_HEADER }, models: { 'gpt-5.5': { modelID: 'gpt-5.5', name: 'GPT 5.5' } } } } }, null, 2));
+    writeCustomProvider('http://127.0.0.1:9/v1');
+    customProviderAt = writeCustomProvider;
     await git('add', '.');
     await git('-c', 'user.email=me@example.invalid', '-c', 'user.name=Me', 'commit', '-q', '-m', 'init');
-    // The custom provider lives in the project's own OpenCode configuration; its address is set once the stand-in runs.
-    const writeCustomProvider = (baseURL) => fs.writeFileSync(path.join(project, 'opencode.json'), JSON.stringify({ providers: { lighthouse: { name: 'Lighthouse', package: 'aisdk:@ai-sdk/openai-compatible', env: ['LIGHTHOUSE_KEY'], settings: { baseURL }, headers: { 'x-team': CUSTOM_HEADER }, models: { 'gpt-5.5': { modelID: 'gpt-5.5', name: 'GPT 5.5' } } } } }, null, 2));
-    writeCustomProvider('http://pending.invalid/v1');
-    customProviderAt = writeCustomProvider;
 
     host = createSpacesHost({
       dataDir,
@@ -169,7 +172,7 @@ describe.skipIf(!LIVE_DOCKER_ENABLED)('grants on a real space: docker (live)', (
     expect(insideTheSpace.stdout.length).toBeGreaterThan(0);
     expect(insideTheSpace.stdout).not.toContain(TYPED_KEY);
     // What the space does have: the configuration that points OpenCode at the window.
-    const config = JSON.parse((await inside(['cat', SPACE_OPENCODE_CONFIG_PATH])).stdout);
+    const config = JSON.parse((await inside(['cat', spaceOpenCodeConfigPath(spaceId)])).stdout);
     expect(config.provider.anthropic.options).toEqual({ baseURL: 'http://gatekeeper:8080/model/anthropic', apiKey: 'space-window' });
     expect((await listed())).toMatchObject({ access: 'granted', needsAccess: [], grants: [expect.objectContaining({ id: 'anthropic' })] });
   }, 120_000);
@@ -197,7 +200,7 @@ describe.skipIf(!LIVE_DOCKER_ENABLED)('grants on a real space: docker (live)', (
     expect(insideTheSpace.stdout).not.toContain(CUSTOM_KEY);
     expect(insideTheSpace.stdout).not.toContain(CUSTOM_HEADER);
     // What the space does have: the provider as the host defines it, at the window, with the placeholder key.
-    const config = JSON.parse((await inside(['cat', SPACE_OPENCODE_CONFIG_PATH])).stdout);
+    const config = JSON.parse((await inside(['cat', spaceOpenCodeConfigPath(spaceId)])).stdout);
     expect(config.providers.lighthouse).toEqual({ name: 'Lighthouse', package: 'aisdk:@ai-sdk/openai-compatible', settings: { baseURL: 'http://gatekeeper:8080/model/lighthouse', apiKey: WINDOW_PLACEHOLDER_KEY }, models: { 'gpt-5.5': { modelID: 'gpt-5.5', name: 'GPT 5.5' } } });
     expect(await listed()).toMatchObject({ access: 'granted', needsAccess: [] });
   }, 120_000);
@@ -217,6 +220,25 @@ describe.skipIf(!LIVE_DOCKER_ENABLED)('grants on a real space: docker (live)', (
     expect(await until(async () => (await upstream.seen()).some(fromOpenCode), 120_000)).toBe(true);
     expect((await upstream.seen()).find(fromOpenCode)).toMatchObject({ authorization: 'none' });
     expect(JSON.stringify(await upstream.seen())).not.toContain(TYPED_KEY);
+  }, 180_000);
+
+  it('sends a turn of OpenCode inside through the window for a provider the project itself defines, over the copy of that definition inside', async () => {
+    // Relies on the two cases above: the session of the Anthropic case and the lighthouse grant.
+    // The project's own `opencode.json` is in the space with its unreachable address; the entry
+    // the host wrote beside the project is the one OpenCode inside reads, and the home directory
+    // holds none.
+    expect((await inside(['cat', `${(await listed()).directory}/opencode.json`])).stdout).toContain('http://127.0.0.1:9/v1');
+    expect((await inside(['test', '-e', LEGACY_SPACE_OPENCODE_CONFIG_PATH])).code).not.toBe(0);
+    const directory = (await listed()).directory;
+    const headers = { 'content-type': 'application/json', 'x-opencode-directory': encodeURIComponent(directory) };
+    const model = await prefixed(`/session/${session.id}/model`, { ...json({ model: { id: 'gpt-5.5', providerID: 'lighthouse' } }), headers });
+    expect(model.status, await model.clone().text()).toBeLessThan(300);
+    const prompt = await prefixed(`/session/${session.id}/prompt`, { ...json({ id: `msg_${crypto.randomBytes(8).toString('hex')}`, text: 'Say hello through the project provider.' }), headers });
+    expect(prompt.status, await prompt.clone().text()).toBeLessThan(300);
+    const fromOpenCode = (entry) => entry.method === 'POST' && entry.authorization === sha256(`Bearer ${CUSTOM_KEY}`) && entry.path.startsWith('/v1/chat/completions');
+    expect(await until(async () => (await upstream.seen()).some(fromOpenCode), 120_000)).toBe(true);
+    expect((await upstream.seen()).find(fromOpenCode)).toMatchObject({ team: sha256(CUSTOM_HEADER) });
+    expect(JSON.stringify(await upstream.seen())).not.toContain(CUSTOM_KEY);
   }, 180_000);
 
   it('measures whether OpenCode inside takes a provider granted after its instance started', async () => {
@@ -285,7 +307,7 @@ console.log(JSON.stringify(rows.map((row) => ({ ...row, active: row.active === 1
       expect(JSON.parse(through.stdout)).toMatchObject({ path: '/v1/responses', authorization: sha256(`Bearer ${LOGIN_TOKEN}`) });
       // The row inside names the method with placeholder tokens; the key grant's row-less state is gone.
       expect(await rowsInside()).toEqual([expect.objectContaining({ id: spaceLoginCredentialId('openai'), integrationID: 'openai', active: true, value: expect.objectContaining({ type: 'oauth', methodID: 'chatgpt-token-sharing', access: WINDOW_PLACEHOLDER_KEY, refresh: WINDOW_PLACEHOLDER_KEY, metadata: { clientID: 'client_live', scopes: ['chatgpt.tokens.use.direct'] } }) })]);
-      const config = JSON.parse((await inside(['cat', SPACE_OPENCODE_CONFIG_PATH])).stdout);
+      const config = JSON.parse((await inside(['cat', spaceOpenCodeConfigPath(spaceId)])).stdout);
       expect(config.provider.openai.options).toEqual({ baseURL: 'http://gatekeeper:8080/model/openai', transport: 'http' });
       // Not on the host's disk, not in container metadata, not anywhere the space can look.
       expect(JSON.parse(recordText()).grants.find((grant) => grant.id === 'openai')).toEqual({ kind: 'login', id: 'openai', provider: 'openai', method: 'chatgpt-token-sharing' });
@@ -348,7 +370,7 @@ console.log(JSON.stringify(rows.map((row) => ({ ...row, active: row.active === 1
     it('takes the row with it when a key replaces the login', async () => {
       await host.journey.grantAccess(spaceId, { kind: 'model', provider: 'openai', upstream: upstream.url, secret: { kind: 'env', name: 'OPENAI_API_KEY' } });
       expect(await rowsInside()).toEqual([]);
-      const config = JSON.parse((await inside(['cat', SPACE_OPENCODE_CONFIG_PATH])).stdout);
+      const config = JSON.parse((await inside(['cat', spaceOpenCodeConfigPath(spaceId)])).stdout);
       expect(config.provider.openai.options).toEqual({ baseURL: 'http://gatekeeper:8080/model/openai', apiKey: WINDOW_PLACEHOLDER_KEY });
       expect(recordText()).not.toContain(hostLogin.access);
       // A space that holds a key is not one the keeper has a login to say to.
@@ -389,7 +411,7 @@ console.log(JSON.stringify(rows.map((row) => ({ ...row, active: row.active === 1
       // The row inside names the method and the window as the address, next to nothing else; the
       // key the OpenAI provider holds stays in the configuration, and Copilot has no entry there.
       expect(await rowsInside()).toEqual([expect.objectContaining({ id: spaceLoginCredentialId('github-copilot'), integrationID: 'github-copilot', active: true, value: { type: 'oauth', methodID: 'device', access: WINDOW_PLACEHOLDER_KEY, refresh: WINDOW_PLACEHOLDER_KEY, expires: Date.UTC(2100, 0, 1), metadata: { apiEndpoint: 'http://gatekeeper:8080/model/github-copilot' } } })]);
-      const config = JSON.parse((await inside(['cat', SPACE_OPENCODE_CONFIG_PATH])).stdout);
+      const config = JSON.parse((await inside(['cat', spaceOpenCodeConfigPath(spaceId)])).stdout);
       expect(config.provider['github-copilot']).toBeUndefined();
       expect(config.provider.openai.options).toEqual({ baseURL: 'http://gatekeeper:8080/model/openai', apiKey: WINDOW_PLACEHOLDER_KEY });
       // The token is nowhere the host keeps or the space can look, and the address GitHub gave stays on the host.

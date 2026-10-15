@@ -8,6 +8,7 @@ import { routingI18n } from './routing.i18n';
 import { pluginPanelI18n } from './plugin-panel.i18n';
 import { surfacePanelI18n } from './surface-panel.i18n';
 import { fileArtifactsI18n } from './file-artifacts.i18n';
+import { htmlRenderI18n } from './html-render.i18n';
 import { usageStatsI18n } from './usage-stats.i18n';
 import { webSearchI18n } from './websearch.i18n';
 import { isolatedSpacesI18n } from './isolated-spaces.i18n';
@@ -17,6 +18,7 @@ import { environmentI18n } from './environment.i18n';
 import { providersI18n } from './providers.i18n';
 import { mcpGridI18n } from './mcp-grid.i18n';
 import { pluginsGridI18n } from './plugins-grid.i18n';
+import { integrationsCatalogI18n } from './integrations-catalog.i18n';
 
 export const dict = {
   'opencodeCompatibility.bundled': 'يأتي OpenCode مضمّنًا مع OpenChamber. حدّث OpenChamber للحصول على OpenCode v2.',
@@ -203,6 +205,7 @@ export const dict = {
   'mobile.connect.cancelPassword': 'استخدام خادم آخر',
   'mobile.connect.connecting': 'جارٍ الاتصال…',
   'mobile.connect.notice.unreachable': 'تعذّر الوصول إلى {label}. تحقق من أن الخادم يعمل.',
+  'mobile.connect.notice.relayLimit': "رفض مرحّل OpenChamber الاتصال بـ {label}: عدد كبير جدًا من الأجهزة أو محاولات إعادة الاتصال. أغلق OpenChamber على جهاز آخر أو انتظر دقيقة، ثم اضغط على {label} للمحاولة مرة أخرى.",
   'mobile.connect.notice.authExpired': 'انتهت صلاحية الوصول إلى {label} أو أُلغيت. سجّل الدخول مجددًا.',
   'mobile.connect.recovery.description': 'تعذّر الاتصال بالخادم المحفوظ. تحقق من أنه يعمل، أو اختر نسخة أخرى.',
   'mobile.connect.scanQr': 'مسح رمز QR',
@@ -220,6 +223,7 @@ export const dict = {
   'mobile.connect.splash.connectingTo': 'جارٍ الاتصال بالجهاز:',
   'mobile.connect.error.invalidUrl': 'عنوان URL للخادم هذا غير صالح.',
   'mobile.connect.error.unreachable': 'تعذّر الوصول إلى خادم OpenChamber هذا.',
+  'mobile.connect.error.relayLimit': "رفض مرحّل OpenChamber الاتصال: عدد كبير جدًا من الأجهزة أو محاولات إعادة الاتصال. أغلق OpenChamber على جهاز آخر أو انتظر دقيقة، ثم حاول مرة أخرى.",
   'mobile.connect.error.authRequired': 'يتطلب هذا الخادم كلمة مرور أو رمز عميل مميزًا.',
   'mobile.connect.error.passwordFailed': 'تعذّر فتح قفل هذا الخادم. تحقق من كلمة المرور.',
   'mobile.instances.addTitle': 'إضافة نسخة',
@@ -783,6 +787,7 @@ export const dict = {
   'sessions.sidebar.group.pr.status.mergeConflicts': 'تعارضات دمج',
   'sessions.sidebar.group.pr.status.mergeBlocked': 'الدمج محظور',
   'sessions.sidebar.group.pr.status.checksFailing': 'فحوصات فاشلة',
+  'sessions.sidebar.group.pr.status.checksRunning': 'الفحوصات قيد التشغيل',
   'sessions.sidebar.group.issue.status.open': 'مشكلة مفتوحة',
   'sessions.sidebar.group.issue.status.completed': 'مكتملة',
   'sessions.sidebar.group.issue.status.notPlanned': 'غير مخطط لها',
@@ -2229,6 +2234,7 @@ export const dict = {
   'session.newWorktree.toast.worktreeCreatedDescription': '{target} - جارٍ التهيئة في الخلفية',
   'session.newWorktree.toast.fetchSourceFailed': 'تعذّر الجلب من المستودع البعيد — أُنشئت من الحالة المحلية',
   'session.newWorktree.toast.fetchSourceAccess': 'تعذّر الجلب: يحتاج وصول هذا المستودع إلى مراجعة في «إعداد المستودع». أُنشئت من الحالة المحلية.',
+  'session.newWorktree.toast.branchBackup': 'أصبح الفرع {branch} مطابقًا للفرع البعيد. حُفظت إيداعاته السابقة في {backup}.',
   'session.githubIntegration.tabs.pullRequests': 'طلبات السحب',
   'session.githubIntegration.validation.branchAlreadyCheckedOut': 'الفرع مسحوب بالفعل في شجرة عمل (worktree)',
   'session.githubIntegration.validation.failed': 'تعذّر التحقق',
@@ -2969,6 +2975,7 @@ export const dict = {
   'desktopHostSwitcher.status.incompatible': 'غير متوافق',
   'desktopHostSwitcher.status.wrongService': 'خدمة خاطئة',
   'desktopHostSwitcher.status.unreachable': 'يتعذّر الوصول',
+  'desktopHostSwitcher.status.relayLimit': "تم بلوغ حد المرحّل",
   'desktopHostSwitcher.status.unknown': 'غير معروف',
   'desktopHostSwitcher.status.ping': ' · زمن الاستجابة {ms} ms',
   'desktopHostSwitcher.statusAria': 'حالة النسخة',
@@ -3032,6 +3039,10 @@ export const dict = {
   'desktopHostSwitcher.toast.sshConnected': "تم الاتصال بنسخة SSH \"{host}\"",
   'desktopHostSwitcher.toast.sshFailedToConnect': "تعذّر الاتصال بنسخة SSH \"{host}\"",
   'desktopHostSwitcher.toast.instanceUnreachable': "يتعذّر الوصول إلى النسخة \"{host}\"",
+  'desktopHostSwitcher.toast.relayLimit': "رفض مرحّل OpenChamber الاتصال بـ \"{host}\": عدد كبير جدًا من الأجهزة أو محاولات إعادة الاتصال. أغلق OpenChamber على جهاز آخر أو انتظر دقيقة، ثم حاول مرة أخرى.",
+  'relayConnection.limitReached.title': "رفض مرحّل OpenChamber الاتصال",
+  'relayConnection.limitReached.description': "عدد كبير جدًا من الأجهزة أو محاولات إعادة الاتصال لهذه النسخة. أغلق OpenChamber على جهاز آخر أو انتظر دقيقة، ثم حاول مرة أخرى.",
+  'relayConnection.limitReached.retry': "حاول مرة أخرى",
   'miniChat.header.newSession': 'جلسة جديدة',
   'miniChat.header.session': 'الجلسة',
   'miniChat.header.defaultAgent': 'الوكيل الافتراضي',
@@ -3756,6 +3767,7 @@ export const dict = {
   ...pluginPanelI18n.ar,
   ...surfacePanelI18n.ar,
   ...fileArtifactsI18n.ar,
+  ...htmlRenderI18n.ar,
   ...usageStatsI18n.ar,
   ...webSearchI18n.ar,
   ...isolatedSpacesI18n.ar,
@@ -3765,6 +3777,7 @@ export const dict = {
   ...providersI18n.ar,
   ...mcpGridI18n.ar,
   ...pluginsGridI18n.ar,
+  ...integrationsCatalogI18n['ar'],
   'settings.usage.page.state.claudeSignedOutTitle': 'لم يتم تسجيل الدخول إلى Claude Code',
   'settings.usage.page.state.claudeSignInCommand': 'شغّل هذا الأمر في الطرفية:',
   'settings.openchamber.visual.field.confirmFileTreeMove': 'التأكيد قبل نقل الملفات',

@@ -43,8 +43,9 @@ import { DraggableSessionRow } from '../folders/sessionFolderDnd';
 import { useSessionRowOrderRegistry } from './sessionRowOrder';
 import { canShowSessionWorktreeMenu, getSessionWorktreeMenuDisabled, nodeContainsSessionId, nodeHasPinnedMembershipChange, resolveSessionPrLookup, resolveTooltipBranchLabel, selectBlockingBadgeSessionScopes, type BlockingBadgeSessionScope } from './sessionNodeItemUtils';
 import { useSessionRowMenuState } from './useSessionRowMenuState';
+import { buildActiveSessionTreeFromCache, collectSessionMoveDescendants } from './sessionSubtreeActions';
 import type { SessionNode } from '../types';
-import { isTwoLineTimelineContext, type SessionSidebarRenderContext } from '../sessionSidebarRowModel';
+import { hasTreeSlotContext, isTwoLineTimelineContext, type SessionSidebarRenderContext } from '../sessionSidebarRowModel';
 import { SessionTimelineRowBody } from './SessionTimelineRowBody';
 import { sessionTreeRowPaddingLeft } from './sessionTreeGeometry';
 import { FileTreeChevron } from '@/components/views/files/FileTreeRowParts';
@@ -86,6 +87,7 @@ import { streamPerfCount } from '@/stores/utils/streamDebug';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 import { useSessionFoldersStore } from '@/stores/useSessionFoldersStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { useSessionDisplayStore } from '@/stores/useSessionDisplayStore';
 import { resolveEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import type { WorktreeMetadata } from '@/types/worktree';
 import {
@@ -404,8 +406,17 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
   );
   // Flat rows: no tree gutter, live state on the right. Chats and the Tree
   // view's Pinned and In work rows keep it on one line.
-  const isOneLineTimelineRow = renderContext === 'timeline-chat' || renderContext === 'mixed-compact';
+  const isOneLineTimelineRow = renderContext === 'timeline-chat' || renderContext === 'tree-chat' || renderContext === 'mixed-compact';
   const isTimelineRow = isTwoLineTimelineContext(renderContext) || isOneLineTimelineRow;
+  // The Tree view's one-line Chats, Pinned and In work rows never expand, but
+  // they keep the tree's slot and geometry, so their state reads down the
+  // same left edge as the tree under them. List rows stay flat.
+  const hasTreeSlot = hasTreeSlotContext(renderContext);
+  // While the Pinned section is shown it holds every pinned zone session, and
+  // its header already says they are pinned; In work then has none of them.
+  const isZoneRow = renderContext === 'timeline-mixed' || renderContext === 'mixed-compact';
+  const pinnedSectionShown = useSessionDisplayStore((state) => state.showPinnedSection);
+  const hidePinnedMarker = isZoneRow && pinnedSectionShown;
   // Two-line rows in Pinned and In work show the project's own icon; the row
   // reads exactly that one project record, and `find` keeps the reference
   // stable between renders.
@@ -600,6 +611,9 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
 
   const [exportDialogOpen, setExportDialogOpen] = React.useState(false);
   const [exportIncludeSubtasks, setExportIncludeSubtasks] = React.useState(true);
+  // The tree the open export dialog offers. A flat row's own node has no
+  // children, so the tree is resolved when the user picks Export Markdown.
+  const [exportTree, setExportTree] = React.useState<SessionNode | null>(null);
 
   const legacyContextKey = `${renderContext}:${archivedBucket ? 'archived' : 'active'}:${session.id}`;
   const menuInstanceKey = rowKey ? `session-menu:${rowKey}` : legacyContextKey;
@@ -691,7 +705,7 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
   const isSessionMenuOpen = isMenuOpen || isContextMenuOpen;
   const multiRunKey = React.useMemo(() => getMultiRunIdentity(resolvedSession)?.key ?? null, [resolvedSession]);
 
-  const descendantCount = React.useMemo(() => collectNodeDescendantIds(node).length, [collectNodeDescendantIds, node]);
+  const descendantCount = React.useMemo(() => (exportTree ? collectNodeDescendantIds(exportTree).length : 0), [collectNodeDescendantIds, exportTree]);
 
   const collectChildExports = React.useCallback(async (children: SessionNode[]): Promise<{ children: ChildSessionExport[]; skipped: number }> => {
     const results: ChildSessionExport[] = [];
@@ -726,7 +740,7 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
       : t('sessions.sidebar.session.export.skippedSubtaskMany', { count }));
   }, [t]);
 
-  const doExportSession = React.useCallback(async (includeSubtasks: boolean) => {
+  const doExportSession = React.useCallback(async (includeSubtasks: boolean, tree: SessionNode) => {
     if (!sessionDirectory) {
       toast.error(t('sessions.sidebar.session.export.nothingToExport'));
       return;
@@ -744,8 +758,8 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
 
     let childExports: ChildSessionExport[] | undefined;
     let skippedSubtaskCount = 0;
-    if (includeSubtasks && node.children.length > 0) {
-      const collected = await collectChildExports(node.children);
+    if (includeSubtasks && tree.children.length > 0) {
+      const collected = await collectChildExports(tree.children);
       childExports = collected.children;
       skippedSubtaskCount = collected.skipped;
     }
@@ -774,7 +788,7 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
     downloadAsMarkdown(markdown, filename);
     toast.success(t('sessions.sidebar.session.export.success'));
     showSkippedSubtasksWarning(skippedSubtaskCount);
-  }, [collectChildExports, loadExportRecords, node.children, resolvedSession.title, session.id, sessionDirectory, showSkippedSubtasksWarning, t]);
+  }, [collectChildExports, loadExportRecords, resolvedSession.title, session.id, sessionDirectory, showSkippedSubtasksWarning, t]);
   const guestActionEntries = useGuestActions();
   const guestSessionActionEntries = React.useMemo(() => guestSessionActions(guestActionEntries), [guestActionEntries]);
   const handleGuestSessionAction = React.useCallback((entry: GuestActionEntry) => {
@@ -789,13 +803,15 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
     });
   }, [loadExportRecords, resolvedSession.title, session.id, sessionDirectory, t]);
   const handleExportSession = React.useCallback(async () => {
-    if (node.children.length > 0) {
+    const tree = node.children.length > 0 ? node : buildActiveSessionTreeFromCache(resolvedSession);
+    if (tree.children.length > 0) {
+      setExportTree(tree);
       setExportIncludeSubtasks(true);
       setExportDialogOpen(true);
       return;
     }
-    await doExportSession(false);
-  }, [doExportSession, node.children.length]);
+    await doExportSession(false, tree);
+  }, [doExportSession, node, resolvedSession]);
 
   const handleOpenMiniChatWindow = React.useCallback(() => {
     if (!sessionDirectory) return;
@@ -907,7 +923,7 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
         </button>
       </form>
     );
-    if (isTimelineRow) {
+    if (!hasTreeSlot) {
       // Renaming keeps the whole card in place: the title line becomes the
       // input, project and branch stay where they were.
       return (
@@ -958,7 +974,7 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
         style={{ paddingInlineStart: sessionTreeRowPaddingLeft(depth) }}
         // my-0.5 matches the normal row box so entering rename mode does not
         // shift the row vertically; the empty slot keeps the title in place.
-        className="group relative my-0.5 flex items-center gap-1.5 rounded-md py-[3px] pe-2.5"
+        className={cn('group relative my-0.5 flex items-center gap-1.5 rounded-md pe-2.5', isTimelineRow ? 'py-1' : 'py-[3px]')}
       >
         <span aria-hidden className="h-3.5 w-3.5 flex-shrink-0" />
         <div className="flex min-w-0 flex-1 flex-col gap-0">
@@ -1011,10 +1027,15 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
       aria-label={isAiRenaming ? t('sessions.aiRename.generating') : t('sessions.sidebar.session.status.movingToWorktree')}
     />
   );
-  // Grouped rows are file tree rows: one guide per ancestor level, then a
-  // slot that holds the chevron of a session with subsessions, or stays empty
-  // so titles line up. Live state sits on the right, as on timeline rows.
-  const treeSlot = isTimelineRow ? null : hasChildren ? (
+  const liveStateMark = isSessionActionPending ? sessionActionSpinner : showStatusMarker ? statusMarkerContent : null;
+  // Grouped rows are file tree rows: one indent per level, then a slot left
+  // of the title. The slot shows the live state, where the eye runs
+  // down the titles; a session with subsessions trades it for its chevron
+  // while the row is hovered or focused. Touch layouts have no hover, so there
+  // a parent keeps its chevron and its state stays on the right, where List
+  // rows, flat by design, always show it.
+  const stateInSlot = hasTreeSlot && liveStateMark !== null && !(hasChildren && alwaysShowActions);
+  const treeChevron = hasChildren ? (
     <span
       role="button"
       tabIndex={0}
@@ -1030,7 +1051,10 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
           toggleParent(expansionKey);
         }
       }}
-      className="inline-flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className={cn(
+        'inline-flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        stateInSlot && 'opacity-0 transition-opacity group-hover:opacity-100 group-has-[:focus-visible]:opacity-100',
+      )}
       aria-label={isExpanded
         ? t('sessions.sidebar.session.subsessions.collapse')
         : t('sessions.sidebar.session.subsessions.expand')}
@@ -1038,7 +1062,19 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
     >
       <FileTreeChevron expanded={isExpanded} />
     </span>
-  ) : <span aria-hidden className="h-3.5 w-3.5 flex-shrink-0" />;
+  ) : null;
+  const treeSlot = !hasTreeSlot ? null : stateInSlot ? (
+    <span className="relative inline-flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center">
+      {treeChevron}
+      {treeChevron ? (
+        // Under the pointer the chevron takes over, so the mark passes the
+        // pointer through to it.
+        <span className="pointer-events-none absolute inset-0 inline-flex items-center justify-center transition-opacity group-hover:opacity-0 group-has-[:focus-visible]:opacity-0">
+          {liveStateMark}
+        </span>
+      ) : liveStateMark}
+    </span>
+  ) : treeChevron ?? <span aria-hidden className="h-3.5 w-3.5 flex-shrink-0" />;
 
   const streamingIndicator = isZombie
     ? <Icon name="error-warning" className="h-4 w-4 text-status-warning" />
@@ -1345,7 +1381,7 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
                       requestSessionTreeMove({
                         kind: 'existing',
                         root: resolvedSession,
-                        descendants: collectNodeDescendantSessions(node),
+                        descendants: collectSessionMoveDescendants(resolvedSession, collectNodeDescendantSessions(node)),
                         sourceDirectory: sessionDirectory,
                         destination: target.metadata,
                         messages: buildSessionTreeMoveMessages(t, {
@@ -1378,7 +1414,7 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
                     requestSessionTreeMove({
                       kind: 'quick',
                       root: resolvedSession,
-                      descendants: collectNodeDescendantSessions(node),
+                      descendants: collectSessionMoveDescendants(resolvedSession, collectNodeDescendantSessions(node)),
                       sourceDirectory: sessionDirectory,
                       messages: buildSessionTreeMoveMessages(t, {
                         success: 'sessions.sidebar.session.moveToWorktree.success',
@@ -1632,13 +1668,18 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
       project={timelineProject}
       projectLabel={tooltipProjectLabel}
       title={renderHighlightedText(sessionTitle, normalizedSessionSearchQuery)}
+      // A finished turn nobody has seen and a request waiting on the user
+      // read like an unread mail; a running turn at full strength; the rest
+      // recede.
       titleClassName={isActive || isRowSelected
         ? 'text-interactive-selection-foreground'
-        : needsAttention ? 'text-foreground' : 'text-foreground/80'}
+        : showUnreadStatus || hasPendingPermission || hasPendingForm
+          ? 'font-semibold text-foreground'
+          : isStreaming ? 'text-foreground' : 'text-muted-foreground'}
       branchLabel={tooltipBranchLabel}
       spaceMark={branchInSpace ? t('sessions.sidebar.group.space') : null}
-      statusDot={isSessionActionPending ? sessionActionSpinner : showStatusMarker ? statusMarkerContent : null}
-      pinnedMarker={isPinnedSession && !isSessionActionPending ? pinnedMarkerContent : null}
+      statusDot={stateInSlot ? null : liveStateMark}
+      pinnedMarker={isPinnedSession && !isSessionActionPending && !hidePinnedMarker ? pinnedMarkerContent : null}
       timeSlot={showActivityDuration
         ? <SessionActivityDuration sessionId={session.id} running={isStreaming} className="typography-micro" />
         : sessionCompactUpdatedLabel}
@@ -1744,13 +1785,13 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
                 data-session-archived={archivedBucket ? '1' : '0'}
                 aria-current={isActive ? 'page' : undefined}
                 onClick={handleRowBackgroundClick}
-                // Timeline rows have no gutter: their content sits 10px in.
-                // Grouped rows use the file tree geometry: 12px per level from
-                // an 8px edge, then the chevron slot and a 6px gap.
-                style={{ paddingInlineStart: isTimelineRow ? TIMELINE_ROW_LEFT_PX : sessionTreeRowPaddingLeft(depth) }}
+                // List rows have no gutter: their content sits 10px in.
+                // Rows with the tree slot use the file tree geometry: 12px per
+                // level from an 8px edge, then the slot and a 6px gap.
+                style={{ paddingInlineStart: hasTreeSlot ? sessionTreeRowPaddingLeft(depth) : TIMELINE_ROW_LEFT_PX }}
                 className={cn(
                   'oc-ref-tint-scope group relative my-0.5 flex cursor-pointer items-center rounded-md pe-2.5',
-                  !isTimelineRow && 'gap-1.5',
+                  hasTreeSlot && 'gap-1.5',
                   // Tree rows sit a little tighter than the timeline's.
                   isTimelineRow ? (isOneLineTimelineRow ? 'py-1' : 'py-1.5') : 'py-[3px]',
                   !(isActive || isRowSelected) && 'hover:bg-interactive-hover/60',
@@ -1988,7 +2029,7 @@ function SessionNodeItemComponent(props: SessionNodeItemProps): React.ReactNode 
               type="button"
               onClick={() => {
                 setExportDialogOpen(false);
-                void doExportSession(exportIncludeSubtasks);
+                void doExportSession(exportIncludeSubtasks, exportTree ?? node);
               }}
               size="sm"
             >

@@ -2,6 +2,7 @@ import React from 'react';
 import { useSessionTurnActivity } from '@/sync/global-session-status';
 import { SessionActivityIndicator } from '@/components/session/SessionActivityIndicator';
 import { createPortal } from 'react-dom';
+import { isIMECompositionEvent } from '@/lib/ime';
 import {
   RiAddLine,
   RiArrowDownSLine,
@@ -1031,11 +1032,11 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
     [sessions],
   );
 
-  // Sessions in work, with their subsessions, move to their own section under
-  // Chats and leave the projects, like the desktop sidebar. With the section
-  // hidden from the display panel they stay where they are. Chats are plain
-  // conversations and never in work. Ownership and search still see every
-  // session.
+  // Sessions in work, with their subsessions, get their own section under
+  // Chats and stay in their projects too, like the desktop sidebar. With the
+  // section hidden from the display panel they show in their projects only.
+  // Chats are plain conversations and never in work. Ownership and search
+  // still see every session.
   const sessionWorkEnabled = useUIStore((state) => state.sessionWorkEnabled);
   const workSessionIds = React.useMemo(() => {
     const ids = new Set<string>();
@@ -1884,10 +1885,11 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
     sectionId: string,
     icon: IconName,
     label: string,
-    bucket: WorktreeBucket,
     entries: readonly TimelineEntry[],
   ): React.ReactNode => {
-    if (bucket.sessions.length === 0) return null;
+    // The count is the rows: a run's lanes share one, and a session whose
+    // project is unresolved has none.
+    if (entries.length === 0) return null;
     const expanded = projectExpandedMap[sectionId] ?? true;
     return (
       <section>
@@ -1916,12 +1918,12 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
             {label}
           </span>
           <span className="shrink-0 typography-micro text-muted-foreground tabular-nums">
-            {bucket.sessions.filter((session) => !getParentId(session)).length}
+            {entries.length}
           </span>
         </button>
         <MobileDisclosure open={expanded}>{() => (
           <div className="pb-2">
-            <MobileTimelineRows entries={entries} showProject compact={compactZoneRows} handlers={timelineHandlers} />
+            <MobileTimelineRows entries={entries} showProject compact={compactZoneRows} pinMarker={sectionId !== PINNED_SECTION_ID} handlers={timelineHandlers} />
           </div>
         )}</MobileDisclosure>
       </section>
@@ -2255,8 +2257,8 @@ export const MobileSessionsSheet: React.FC<MobileSessionsSheetProps> = ({ open, 
                   </section>
                 );
               })()}
-              {renderZoneSection(PINNED_SECTION_ID, 'pushpin', t('sessions.sidebar.activity.pinnedTitle'), pinnedBucket, pinnedTimelineEntries)}
-              {renderZoneSection(WORK_SECTION_ID, 'eye', t('sessions.sidebar.work.title'), workBucket, workTimelineEntries)}
+              {renderZoneSection(PINNED_SECTION_ID, 'pushpin', t('sessions.sidebar.activity.pinnedTitle'), pinnedTimelineEntries)}
+              {renderZoneSection(WORK_SECTION_ID, 'eye', t('sessions.sidebar.work.title'), workTimelineEntries)}
               {orderedNodes.map((node) => {
                 const projectExpanded = isProjectExpanded(node);
                 const buckets = normalizedQuery
@@ -2678,7 +2680,7 @@ const MobileSessionsDrawerContainer: React.FC<{
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onCloseRef.current();
+      if (event.key === 'Escape' && !isIMECompositionEvent(event)) onCloseRef.current();
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => {

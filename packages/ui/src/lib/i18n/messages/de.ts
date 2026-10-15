@@ -8,6 +8,7 @@ import { routingI18n } from './routing.i18n';
 import { pluginPanelI18n } from './plugin-panel.i18n';
 import { surfacePanelI18n } from './surface-panel.i18n';
 import { fileArtifactsI18n } from './file-artifacts.i18n';
+import { htmlRenderI18n } from './html-render.i18n';
 import { usageStatsI18n } from './usage-stats.i18n';
 import { webSearchI18n } from './websearch.i18n';
 import { isolatedSpacesI18n } from './isolated-spaces.i18n';
@@ -17,6 +18,7 @@ import { environmentI18n } from './environment.i18n';
 import { providersI18n } from './providers.i18n';
 import { mcpGridI18n } from './mcp-grid.i18n';
 import { pluginsGridI18n } from './plugins-grid.i18n';
+import { integrationsCatalogI18n } from './integrations-catalog.i18n';
 
 export const dict = {
   "opencodeCompatibility.bundled": "OpenCode ist in OpenChamber enthalten. Aktualisieren Sie OpenChamber, um OpenCode v2 zu erhalten.",
@@ -135,6 +137,7 @@ export const dict = {
   ...pluginPanelI18n.de,
   ...surfacePanelI18n.de,
   ...fileArtifactsI18n.de,
+  ...htmlRenderI18n.de,
   ...usageStatsI18n.de,
   ...webSearchI18n.de,
   ...isolatedSpacesI18n.de,
@@ -144,6 +147,7 @@ export const dict = {
   ...providersI18n.de,
   ...mcpGridI18n.de,
   ...pluginsGridI18n.de,
+  ...integrationsCatalogI18n['de'],
   'common.language.german': 'Deutsch',
   'common.loading': 'Wird geladen...',
   'common.unavailable': 'Nicht verfügbar',
@@ -205,6 +209,7 @@ export const dict = {
   'mobile.connect.splash.connectingTo': 'Verbindung zum Gerät:',
   'mobile.connect.error.invalidUrl': 'Diese Server-URL ist ungültig.',
   'mobile.connect.error.unreachable': 'Konnte den OpenChamber-Server nicht erreichen.',
+  'mobile.connect.error.relayLimit': "Das Relay hat die Verbindung abgelehnt: zu viele Geräte oder Neuverbindungen. Schließen Sie OpenChamber auf einem anderen Gerät oder warten Sie eine Minute und versuchen Sie es dann erneut.",
   'mobile.connect.error.authRequired': 'Dieser Server benötigt ein Passwort oder ein Client-Token.',
   'mobile.connect.error.passwordFailed': 'Konnte diesen Server nicht entsperren. Überprüfen Sie das Passwort.',
   'mobile.instances.addTitle': 'Instanz hinzufügen',
@@ -714,6 +719,7 @@ export const dict = {
   'sessions.sidebar.group.pr.status.mergeConflicts': 'Zusammenführungskonflikte',
   'sessions.sidebar.group.pr.status.mergeBlocked': 'Zusammenführung blockiert',
   'sessions.sidebar.group.pr.status.checksFailing': 'Checks fehlgeschlagen',
+  'sessions.sidebar.group.pr.status.checksRunning': 'Checks laufen',
   'sessions.sidebar.group.issue.status.open': 'Issue offen',
   'sessions.sidebar.group.issue.status.completed': 'Erledigt',
   'sessions.sidebar.group.issue.status.notPlanned': 'Nicht geplant',
@@ -2026,6 +2032,7 @@ export const dict = {
   'session.newWorktree.toast.worktreeCreatedDescription': '{target} - im Hintergrund initialisiert',
   'session.newWorktree.toast.fetchSourceFailed': 'Remote konnte nicht abgerufen werden – aus dem lokalen Stand erstellt',
   'session.newWorktree.toast.fetchSourceAccess': 'Abruf nicht möglich: Der Zugriff auf dieses Repository muss unter „Repository konfigurieren“ geprüft werden. Aus dem lokalen Stand erstellt.',
+  'session.newWorktree.toast.branchBackup': '{branch} entspricht jetzt dem Remote. Die vorherigen Commits liegen in {backup}.',
   'session.githubIntegration.tabs.pullRequests': 'Pull Requests',
   'session.githubIntegration.validation.branchAlreadyCheckedOut': 'Branch ist bereits in einem Worktree ausgecheckt',
   'session.githubIntegration.validation.failed': 'Validierung fehlgeschlagen',
@@ -2746,6 +2753,7 @@ export const dict = {
   'desktopHostSwitcher.status.incompatible': 'Nicht kompatibel',
   'desktopHostSwitcher.status.wrongService': 'Falscher Dienst',
   'desktopHostSwitcher.status.unreachable': 'Nicht erreichbar',
+  'desktopHostSwitcher.status.relayLimit': "Relay-Limit erreicht",
   'desktopHostSwitcher.status.unknown': 'Unbekannt',
   'desktopHostSwitcher.status.ping': ' · {ms}ms Ping',
   'desktopHostSwitcher.statusAria': 'Instanzstatus',
@@ -2809,6 +2817,10 @@ export const dict = {
   'desktopHostSwitcher.toast.sshConnected': 'SSH-Instanz "{host}" verbunden',
   'desktopHostSwitcher.toast.sshFailedToConnect': 'SSH-Instanz "{host}" konnte keine Verbindung herstellen',
   'desktopHostSwitcher.toast.instanceUnreachable': 'Instanz "{host}" ist nicht erreichbar',
+  'desktopHostSwitcher.toast.relayLimit': "Das Relay hat die Verbindung zu \"{host}\" abgelehnt: zu viele Geräte oder Neuverbindungen. Schließen Sie OpenChamber auf einem anderen Gerät oder warten Sie eine Minute und versuchen Sie es dann erneut.",
+  'relayConnection.limitReached.title': "Das Relay hat die Verbindung abgelehnt",
+  'relayConnection.limitReached.description': "Zu viele Geräte oder Neuverbindungen für diese Instanz. Schließen Sie OpenChamber auf einem anderen Gerät oder warten Sie eine Minute und versuchen Sie es dann erneut.",
+  'relayConnection.limitReached.retry': "Erneut versuchen",
   'miniChat.header.newSession': 'Neue Sitzung',
   'miniChat.header.session': 'Sitzung',
   'miniChat.header.defaultAgent': 'Standard-Agent',
@@ -3204,6 +3216,7 @@ export const dict = {
   'chat.chatInput.mrCheckContext': 'Fehlgeschlagene Pipeline-Jobs',
   'chat.chatInput.prCheckContextRemove': 'Kontext der PR-Prüfungen entfernen',
   'mobile.connect.notice.unreachable': '{label} konnte nicht erreicht werden. Prüfen Sie, ob der Server läuft.',
+  'mobile.connect.notice.relayLimit': "Das Relay hat die Verbindung zu {label} abgelehnt: zu viele Geräte oder Neuverbindungen. Schließen Sie OpenChamber auf einem anderen Gerät oder warten Sie eine Minute und tippen Sie dann auf {label}, um es erneut zu versuchen.",
   'mobile.connect.notice.authExpired': 'Der Zugriff auf {label} ist abgelaufen oder wurde widerrufen. Melden Sie sich erneut an.',
   'mobile.connect.recovery.description': 'Verbindung mit dem gespeicherten Server nicht möglich. Prüfen Sie, ob er läuft, oder wählen Sie eine andere Instanz.',
   'mobile.header.openWorkspaceAria': 'Arbeitsbereich öffnen',
