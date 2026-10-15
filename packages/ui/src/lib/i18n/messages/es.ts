@@ -9,6 +9,7 @@ import { routingI18n } from './routing.i18n';
 import { pluginPanelI18n } from './plugin-panel.i18n';
 import { surfacePanelI18n } from './surface-panel.i18n';
 import { fileArtifactsI18n } from './file-artifacts.i18n';
+import { htmlRenderI18n } from './html-render.i18n';
 import { usageStatsI18n } from './usage-stats.i18n';
 import { webSearchI18n } from './websearch.i18n';
 import { isolatedSpacesI18n } from './isolated-spaces.i18n';
@@ -18,6 +19,7 @@ import { environmentI18n } from './environment.i18n';
 import { providersI18n } from './providers.i18n';
 import { mcpGridI18n } from './mcp-grid.i18n';
 import { pluginsGridI18n } from './plugins-grid.i18n';
+import { integrationsCatalogI18n } from './integrations-catalog.i18n';
 
 export const dict: Record<I18nKey, string> = {
   "opencodeCompatibility.bundled": "OpenCode viene incluido en OpenChamber. Actualiza OpenChamber para obtener OpenCode v2.",
@@ -146,6 +148,7 @@ export const dict: Record<I18nKey, string> = {
   ...pluginPanelI18n.es,
   ...surfacePanelI18n.es,
   ...fileArtifactsI18n.es,
+  ...htmlRenderI18n.es,
   ...usageStatsI18n.es,
   ...webSearchI18n.es,
   ...isolatedSpacesI18n.es,
@@ -155,6 +158,7 @@ export const dict: Record<I18nKey, string> = {
   ...providersI18n.es,
   ...mcpGridI18n.es,
   ...pluginsGridI18n.es,
+  ...integrationsCatalogI18n['es'],
   'terminalView.actions.attachSelection': 'Adjuntar salida seleccionada',
   'terminalView.actions.copySelection': 'Copiar salida seleccionada',
   'terminalView.toast.selectionCopied': 'Salida copiada',
@@ -237,6 +241,7 @@ export const dict: Record<I18nKey, string> = {
   "mobile.connect.cancelPassword": "Usar otro servidor",
   "mobile.connect.connecting": "Conectando...",
   "mobile.connect.notice.unreachable": "No se pudo conectar con {label}. Comprueba que el servidor esté en marcha.",
+  "mobile.connect.notice.relayLimit": "El Relay rechazó la conexión con {label}: demasiados dispositivos o reconexiones. Cierra OpenChamber en otro dispositivo o espera un minuto y luego toca {label} para volver a intentarlo.",
   "mobile.connect.notice.authExpired": "El acceso a {label} caducó o fue revocado. Inicia sesión de nuevo.",
   "mobile.connect.recovery.description": "No se pudo conectar con el servidor guardado. Comprueba que esté en marcha o elige otra instancia.",
   "mobile.connect.scanQr": "Escanear código QR",
@@ -254,6 +259,7 @@ export const dict: Record<I18nKey, string> = {
   "mobile.connect.splash.connectingTo": "Conectando al dispositivo:",
   "mobile.connect.error.invalidUrl": "Esa URL de servidor no es válida.",
   "mobile.connect.error.unreachable": "No se pudo conectar con ese servidor de OpenChamber.",
+  "mobile.connect.error.relayLimit": "El Relay rechazó la conexión: demasiados dispositivos o reconexiones. Cierra OpenChamber en otro dispositivo o espera un minuto y vuelve a intentarlo.",
   "mobile.connect.error.authRequired": "Este servidor requiere una contraseña o un token de cliente.",
   "mobile.connect.error.passwordFailed": "No se pudo desbloquear ese servidor. Revisa la contraseña.",
   "mobile.instances.addTitle": "Agregar instancia",
@@ -2240,6 +2246,7 @@ export const dict: Record<I18nKey, string> = {
   "session.newWorktree.toast.worktreeCreatedDescription": "{target} - configurando en segundo plano",
   "session.newWorktree.toast.fetchSourceFailed": "No se pudo obtener del remoto; se creó a partir del estado local",
   "session.newWorktree.toast.fetchSourceAccess": "No se pudo obtener: el acceso a este repositorio necesita atención en Configurar repositorio. Se creó a partir del estado local.",
+  "session.newWorktree.toast.branchBackup": "{branch} ahora coincide con el remoto. Sus commits anteriores se guardaron en {backup}.",
   "session.githubIntegration.tabs.pullRequests": "PR",
   "session.githubIntegration.validation.branchAlreadyCheckedOut": "La rama ya está en uso en un worktree",
   "session.githubIntegration.validation.failed": "No se pudo validar",
@@ -2968,6 +2975,7 @@ export const dict: Record<I18nKey, string> = {
   "desktopHostSwitcher.status.incompatible": "Incompatible",
   "desktopHostSwitcher.status.wrongService": "Servicio incorrecto",
   "desktopHostSwitcher.status.unreachable": "Inalcanzable",
+  "desktopHostSwitcher.status.relayLimit": "Límite del Relay alcanzado",
   "desktopHostSwitcher.status.unknown": "Desconocido",
   "desktopHostSwitcher.status.ping": " · {ms}ms ping",
   "desktopHostSwitcher.statusAria": "Estado de la instancia",
@@ -3031,6 +3039,10 @@ export const dict: Record<I18nKey, string> = {
   "desktopHostSwitcher.toast.sshConnected": "Instancia SSH \"{host}\" conectada",
   "desktopHostSwitcher.toast.sshFailedToConnect": "No se pudo conectar con la instancia SSH \"{host}\"",
   "desktopHostSwitcher.toast.instanceUnreachable": "Instancia \"{host}\" no está disponible",
+  "desktopHostSwitcher.toast.relayLimit": "El Relay rechazó la conexión con \"{host}\": demasiados dispositivos o reconexiones. Cierra OpenChamber en otro dispositivo o espera un minuto y vuelve a intentarlo.",
+  "relayConnection.limitReached.title": "El Relay rechazó la conexión",
+  "relayConnection.limitReached.description": "Demasiados dispositivos o reconexiones para esta instancia. Cierra OpenChamber en otro dispositivo o espera un minuto y vuelve a intentarlo.",
+  "relayConnection.limitReached.retry": "Reintentar",
   "miniChat.header.newSession": "Nueva sesión",
   "miniChat.header.session": "Sesión",
   "miniChat.header.defaultAgent": "Agente predeterminado",

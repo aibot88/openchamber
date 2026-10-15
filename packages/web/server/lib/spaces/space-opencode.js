@@ -15,22 +15,24 @@ import { z } from 'zod';
 
 import { SpaceError } from './errors.js';
 import { tail } from './exec-http.js';
-import { IMAGE_ONLY_PATH, IMAGE_SH, SPACE_OPENCODE_CONFIG_DIRECTORY, SPACE_OPENCODE_CONFIG_PATH, spaceWindowUrl } from './layout.js';
+import { IMAGE_ONLY_PATH, IMAGE_SH, LEGACY_SPACE_OPENCODE_CONFIG_PATH, spaceOpenCodeConfigDirectory, spaceOpenCodeConfigPath, spaceWindowUrl } from './layout.js';
 
 // OpenCode takes a key from this option and its auth plugins stay out of the way; the window
 // throws it away and puts the real one in its place. It is not a secret and never was one.
 export const WINDOW_PLACEHOLDER_KEY = 'space-window';
 
 // Through a temporary name, so OpenCode never reads half a file. The configuration is JSON on
-// stdin: nothing of it is an argument.
-const WRITE_CONFIG_SCRIPT = [
-  IMAGE_ONLY_PATH,
-  `mkdir -p ${SPACE_OPENCODE_CONFIG_DIRECTORY}`,
-  `&& cat > ${SPACE_OPENCODE_CONFIG_PATH}.new && mv ${SPACE_OPENCODE_CONFIG_PATH}.new ${SPACE_OPENCODE_CONFIG_PATH}`,
-].join(' ');
+// stdin: nothing of it is an argument; the path holds the space id, which `spaceWorkPath` checks.
+// The file the host wrote in the home directory before goes after the new one is in place: the
+// host always wrote it whole, so nothing of the agent's is lost that a grant would not have
+// overwritten anyway.
+const writeConfigScriptOf = (spaceId) => {
+  const file = spaceOpenCodeConfigPath(spaceId);
+  return [IMAGE_ONLY_PATH, `mkdir -p ${spaceOpenCodeConfigDirectory(spaceId)}`, `&& cat > ${file}.new && mv ${file}.new ${file}`, `&& rm -f ${LEGACY_SPACE_OPENCODE_CONFIG_PATH}`].join(' ');
+};
 
 /**
- * OpenCode's global configuration for a space with these model grants: each provider, under the
+ * OpenCode's configuration for a space with these model grants: each provider, under the
  * id the host's catalog gives it, with its base URL at the window and a placeholder key. The
  * composer offers the host's catalog, and the same provider id inside is what makes that choice
  * work in the space unchanged. Decided with the maintainer on 2026-09-26.
@@ -273,12 +275,12 @@ export function archivedChatOf({ info, messages }, { directory, archivedAt, keep
  */
 export function createSpaceOpenCode({ exec, requestInside, chatMaxBytes = CHAT_EXPORT_MAX_BYTES, chatTimeoutMs = CHAT_EXPORT_TIMEOUT_MS }) {
   /**
-   * Writes the whole global configuration from the model grants the record holds;
+   * Writes the whole configuration beside the project from the model grants the record holds;
    * `customProviders` holds the host's definition of each custom provider among them, by id.
    */
   const writeProviderConfig = async (spaceId, grants, customProviders = new Map()) => {
     const text = `${JSON.stringify(buildProviderConfig(grants, customProviders), null, 2)}\n`;
-    const result = await exec(spaceId, [IMAGE_SH, '-c', WRITE_CONFIG_SCRIPT], { stdin: text });
+    const result = await exec(spaceId, [IMAGE_SH, '-c', writeConfigScriptOf(spaceId)], { stdin: text });
     if (result.code !== 0) {
       throw new SpaceError('space_setup_failed', `Could not write the provider configuration inside the space: ${tail(result.stderr) || `exit code ${result.code}`}`);
     }

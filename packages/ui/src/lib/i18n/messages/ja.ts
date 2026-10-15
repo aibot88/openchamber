@@ -9,6 +9,7 @@ import { routingI18n } from './routing.i18n';
 import { pluginPanelI18n } from './plugin-panel.i18n';
 import { surfacePanelI18n } from './surface-panel.i18n';
 import { fileArtifactsI18n } from './file-artifacts.i18n';
+import { htmlRenderI18n } from './html-render.i18n';
 import { usageStatsI18n } from './usage-stats.i18n';
 import { webSearchI18n } from './websearch.i18n';
 import { isolatedSpacesI18n } from './isolated-spaces.i18n';
@@ -18,6 +19,7 @@ import { environmentI18n } from './environment.i18n';
 import { providersI18n } from './providers.i18n';
 import { mcpGridI18n } from './mcp-grid.i18n';
 import { pluginsGridI18n } from './plugins-grid.i18n';
+import { integrationsCatalogI18n } from './integrations-catalog.i18n';
 
 export const dict: Record<I18nKey, string> = {
   "opencodeCompatibility.bundled": "OpenCode は OpenChamber に同梱されています。OpenCode v2 を利用するには OpenChamber を更新してください。",
@@ -136,6 +138,7 @@ export const dict: Record<I18nKey, string> = {
   ...pluginPanelI18n.ja,
   ...surfacePanelI18n.ja,
   ...fileArtifactsI18n.ja,
+  ...htmlRenderI18n.ja,
   ...usageStatsI18n.ja,
   ...webSearchI18n.ja,
   ...isolatedSpacesI18n.ja,
@@ -145,6 +148,7 @@ export const dict: Record<I18nKey, string> = {
   ...providersI18n.ja,
   ...mcpGridI18n.ja,
   ...pluginsGridI18n.ja,
+  ...integrationsCatalogI18n['ja'],
   'terminalView.actions.attachSelection': '選択した出力を添付',
   'terminalView.actions.copySelection': '選択した出力をコピー',
   'terminalView.toast.selectionCopied': '出力をコピーしました',
@@ -230,6 +234,7 @@ export const dict: Record<I18nKey, string> = {
   'mobile.connect.connectButton': '接続',
   'mobile.connect.connecting': '接続中...',
   'mobile.connect.notice.unreachable': '{label}に接続できませんでした。サーバーが起動しているか確認してください。',
+  'mobile.connect.notice.relayLimit': "Relay が {label} への接続を拒否しました。デバイスまたは再接続が多すぎます。別のデバイスで OpenChamber を閉じるか 1 分待ってから、{label} をタップしてもう一度お試しください。",
   'mobile.connect.notice.authExpired': '{label}へのアクセスは期限切れか取り消されました。再度サインインしてください。',
   'mobile.connect.recovery.description': '保存済みサーバーに接続できませんでした。サーバーが起動しているか確認するか、別のインスタンスを選んでください。',
   'mobile.connect.password.label': 'パスワード',
@@ -243,6 +248,7 @@ export const dict: Record<I18nKey, string> = {
   'mobile.connect.splash.connectingTo': 'デバイスに接続中:',
   'mobile.connect.error.invalidUrl': 'そのサーバー URL は無効です。',
   'mobile.connect.error.unreachable': 'その OpenChamber サーバーに接続できませんでした。',
+  'mobile.connect.error.relayLimit': "Relay が接続を拒否しました。デバイスまたは再接続が多すぎます。別のデバイスで OpenChamber を閉じるか 1 分待ってから、もう一度お試しください。",
   'mobile.connect.error.authRequired': 'このサーバーにはパスワードまたはクライアントトークンが必要です。',
   'mobile.connect.error.passwordFailed': 'サーバーのロックを解除できませんでした。パスワードを確認してください。',
   'mobile.connect.scan.unsupported': 'QR スキャンはインストール済みのモバイルアプリでのみ利用できます。',
@@ -2270,6 +2276,7 @@ export const dict: Record<I18nKey, string> = {
   'session.newWorktree.toast.worktreeCreatedDescription': '{target} - バックグラウンドでブートストラップ中',
   'session.newWorktree.toast.fetchSourceFailed': 'リモートから取得できませんでした — ローカルの状態で作成しました',
   'session.newWorktree.toast.fetchSourceAccess': '取得できませんでした: このリポジトリのアクセスを「リポジトリを設定」で確認してください。ローカルの状態で作成しました。',
+  'session.newWorktree.toast.branchBackup': '{branch} をリモートに合わせました。以前のコミットは {backup} に残してあります。',
   'session.githubIntegration.tabs.pullRequests': 'プルリクエスト',
   'session.githubIntegration.validation.branchAlreadyCheckedOut': 'ブランチはすでにワークツリーでチェックアウトされています',
   'session.githubIntegration.validation.failed': '検証に失敗しました',
@@ -3013,6 +3020,7 @@ export const dict: Record<I18nKey, string> = {
   'desktopHostSwitcher.status.incompatible': '互換性なし',
   'desktopHostSwitcher.status.wrongService': 'サービスが違います',
   'desktopHostSwitcher.status.unreachable': '到達不能',
+  'desktopHostSwitcher.status.relayLimit': "Relay の上限に達しました",
   'desktopHostSwitcher.status.unknown': '不明',
   'desktopHostSwitcher.status.ping': ' · {ms}ms ping',
   'desktopHostSwitcher.statusAria': 'インスタンスステータス',
@@ -3076,6 +3084,10 @@ export const dict: Record<I18nKey, string> = {
   'desktopHostSwitcher.toast.sshConnected': 'SSHインスタンス「{host}」に接続しました',
   'desktopHostSwitcher.toast.sshFailedToConnect': 'SSHインスタンス「{host}」への接続に失敗しました',
   'desktopHostSwitcher.toast.instanceUnreachable': 'インスタンス「{host}」に到達できません',
+  'desktopHostSwitcher.toast.relayLimit': "Relay が「{host}」への接続を拒否しました。デバイスまたは再接続が多すぎます。別のデバイスで OpenChamber を閉じるか 1 分待ってから、もう一度お試しください。",
+  'relayConnection.limitReached.title': "Relay が接続を拒否しました",
+  'relayConnection.limitReached.description': "このインスタンスへのデバイスまたは再接続が多すぎます。別のデバイスで OpenChamber を閉じるか 1 分待ってから、もう一度お試しください。",
+  'relayConnection.limitReached.retry': "再試行",
   'miniChat.header.newSession': '新しいセッション',
   'miniChat.header.session': 'セッション',
   'miniChat.header.defaultAgent': 'デフォルトエージェント',

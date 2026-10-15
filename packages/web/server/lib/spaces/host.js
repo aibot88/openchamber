@@ -195,7 +195,13 @@ export function createSpacesHost({
   const dispatcher = createSpaceDispatcher({
     logger,
     transport: {
-      listSpaceIds: async () => (await listSpaces()).map((space) => space.id),
+      // A miss is an answer only when every configured place answered. A place the settings no
+      // longer name is not one of them: nothing here reaches a space on it either way.
+      listSpaceIds: async () => {
+        const { spaces, unavailable } = await manager.listAllSpaces();
+        const failure = unavailable.find(({ placeId }) => registry.get(placeId))?.failure ?? null;
+        return { ids: spaces.map((space) => space.id), failure };
+      },
       connect: connectReachable,
       readToken: async (spaceId) => {
         await requireReachable(spaceId);

@@ -1,3 +1,14 @@
+## [2.3.3] - 2026-10-14
+
+### New
+
+- Chat: a video link in a reply plays in place.
+
+### Fixes
+
+- Settings: the Small model list and the model picker in the Changes walkthrough show your models again, so commit messages use the model you picked.
+- Chat: letters like g and p keep their tails in the working status label.
+
 ## [2.3.2] - 2026-10-14
 
 ### New

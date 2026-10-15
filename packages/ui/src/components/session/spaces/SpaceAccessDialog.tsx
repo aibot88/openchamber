@@ -173,10 +173,9 @@ const ModelRow: React.FC<ModelRowProps> = ({ entry, provider, initiallyOpen, log
   );
 };
 
-const NetworkSection: React.FC<{ entry: SpaceEntry; domains: ReturnType<typeof useOpenSpaceDomain>; offered: string | null }> = ({ entry, domains, offered }) => {
+const NetworkSection: React.FC<{ entry: SpaceEntry; domains: ReturnType<typeof useOpenSpaceDomain> }> = ({ entry, domains }) => {
   const { t } = useI18n();
-  // A name a refusal offered starts in the field, so allowing it is one click.
-  const [input, setInput] = React.useState(offered ?? '');
+  const [input, setInput] = React.useState('');
   const [invalid, setInvalid] = React.useState(false);
   const submit = async () => {
     const domain = input.trim().toLowerCase();
@@ -294,7 +293,7 @@ const StoppedNotice: React.FC<{ spaceId: string }> = ({ spaceId }) => {
   );
 };
 
-const SpaceAccessBody: React.FC<{ entry: SpaceEntry; focusProviderId: string | null; offeredDomain: string | null }> = ({ entry, focusProviderId, offeredDomain }) => {
+const SpaceAccessBody: React.FC<{ entry: SpaceEntry; focusProviderId: string | null }> = ({ entry, focusProviderId }) => {
   const { t } = useI18n();
   const hostLogins = useSpaceHostLogins(true);
   // A login-only provider has a row while the host has a login for it, in any state, or the space
@@ -318,7 +317,7 @@ const SpaceAccessBody: React.FC<{ entry: SpaceEntry; focusProviderId: string | n
         )}
       </Section>
       <Section title={t('spaces.access.network.label')}>
-        <NetworkSection entry={entry} domains={domains} offered={offeredDomain} />
+        <NetworkSection entry={entry} domains={domains} />
       </Section>
       <Section
         title={t('spaces.access.blocked.label')}
@@ -357,10 +356,10 @@ export const SpaceAccessDialog: React.FC = () => {
   }, [missing, t, target?.spaceId]);
 
   const title = entry ? t('spaces.access.title', { name: entry.name }) : t('spaces.group.access.give');
-  // Keyed by the space, the provider asked for and the domain offered, so opening it again for a
-  // missing key opens that provider's row, and another space starts from nothing typed.
+  // Keyed by the space and the provider asked for, so opening it again for a missing key opens
+  // that provider's row, and another space starts from nothing typed.
   const body = !target ? null : entry
-    ? <SpaceAccessBody key={`${target.spaceId}:${target.providerId ?? ''}:${target.domain ?? ''}`} entry={entry} focusProviderId={target.providerId} offeredDomain={target.domain ?? null} />
+    ? <SpaceAccessBody key={`${target.spaceId}:${target.providerId ?? ''}`} entry={entry} focusProviderId={target.providerId} />
     : <p className={readError ? 'typography-meta text-status-error' : 'typography-meta text-muted-foreground'}>{readError ?? t('spaces.access.loading')}</p>;
   const footer = (
     <div className="flex w-full justify-end">

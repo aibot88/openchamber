@@ -8,6 +8,7 @@ import { routingI18n } from './routing.i18n';
 import { pluginPanelI18n } from './plugin-panel.i18n';
 import { surfacePanelI18n } from './surface-panel.i18n';
 import { fileArtifactsI18n } from './file-artifacts.i18n';
+import { htmlRenderI18n } from './html-render.i18n';
 import { usageStatsI18n } from './usage-stats.i18n';
 import { webSearchI18n } from './websearch.i18n';
 import { isolatedSpacesI18n } from './isolated-spaces.i18n';
@@ -17,6 +18,7 @@ import { environmentI18n } from './environment.i18n';
 import { providersI18n } from './providers.i18n';
 import { mcpGridI18n } from './mcp-grid.i18n';
 import { pluginsGridI18n } from './plugins-grid.i18n';
+import { integrationsCatalogI18n } from './integrations-catalog.i18n';
 
 export const dict = {
   "opencodeCompatibility.bundled": "OpenCode est inclus dans OpenChamber. Mettez OpenChamber à jour pour obtenir OpenCode v2.",
@@ -135,6 +137,7 @@ export const dict = {
   ...pluginPanelI18n.fr,
   ...surfacePanelI18n.fr,
   ...fileArtifactsI18n.fr,
+  ...htmlRenderI18n.fr,
   ...usageStatsI18n.fr,
   ...webSearchI18n.fr,
   ...isolatedSpacesI18n.fr,
@@ -144,6 +147,7 @@ export const dict = {
   ...providersI18n.fr,
   ...mcpGridI18n.fr,
   ...pluginsGridI18n.fr,
+  ...integrationsCatalogI18n['fr'],
   'terminalView.actions.attachSelection': 'Joindre la sortie sélectionnée',
   'terminalView.actions.copySelection': 'Copier la sortie sélectionnée',
   'terminalView.toast.selectionCopied': 'Sortie copiée',
@@ -2012,6 +2016,7 @@ export const dict = {
   'session.newWorktree.toast.worktreeCreatedDescription': '{target} - démarrage en arrière-plan',
   'session.newWorktree.toast.fetchSourceFailed': 'Impossible de récupérer depuis le dépôt distant — création à partir de l\'état local',
   'session.newWorktree.toast.fetchSourceAccess': 'Récupération impossible : l\'accès à ce dépôt doit être vérifié dans Configurer le dépôt. Création à partir de l\'état local.',
+  'session.newWorktree.toast.branchBackup': '{branch} correspond maintenant au distant. Ses commits précédents sont conservés dans {backup}.',
   'session.githubIntegration.tabs.pullRequests': 'PR',
   'session.githubIntegration.validation.branchAlreadyCheckedOut': 'La branche est déjà active dans un worktree',
   'session.githubIntegration.validation.failed': 'Échec de la validation',
@@ -2690,6 +2695,7 @@ export const dict = {
   'desktopHostSwitcher.status.authRequired': 'Authentification requise',
   'desktopHostSwitcher.status.wrongService': 'Mauvais service',
   'desktopHostSwitcher.status.unreachable': 'Injoignable',
+  'desktopHostSwitcher.status.relayLimit': "Limite du Relay atteinte",
   'desktopHostSwitcher.status.unknown': 'Inconnu',
   'desktopHostSwitcher.status.ping': '· Ping {ms}ms',
   'desktopHostSwitcher.statusAria': 'Statut de l\'instance',
@@ -2753,6 +2759,10 @@ export const dict = {
   'desktopHostSwitcher.toast.sshConnected': 'Instance SSH "{host}" connectée',
   'desktopHostSwitcher.toast.sshFailedToConnect': 'L\'instance SSH "{host}" n\'a pas réussi à se connecter',
   'desktopHostSwitcher.toast.instanceUnreachable': 'L\'instance "{host}" est inaccessible',
+  'desktopHostSwitcher.toast.relayLimit': "Le Relay a refusé la connexion à \"{host}\" : trop d'appareils ou de reconnexions. Fermez OpenChamber sur un autre appareil ou attendez une minute, puis réessayez.",
+  'relayConnection.limitReached.title': "Le Relay a refusé la connexion",
+  'relayConnection.limitReached.description': "Trop d'appareils ou de reconnexions pour cette instance. Fermez OpenChamber sur un autre appareil ou attendez une minute, puis réessayez.",
+  'relayConnection.limitReached.retry': "Réessayer",
   'miniChat.header.newSession': 'Nouvelle session',
   'miniChat.header.session': 'Session',
   'miniChat.header.defaultAgent': 'Agent par défaut',
@@ -3116,6 +3126,7 @@ export const dict = {
   'mobile.connect.cancelPassword': 'Utiliser un autre serveur',
   'mobile.connect.connecting': 'Connexion...',
   'mobile.connect.notice.unreachable': 'Impossible de joindre {label}. Vérifiez que le serveur est en marche.',
+  'mobile.connect.notice.relayLimit': "Le Relay a refusé la connexion à {label} : trop d'appareils ou de reconnexions. Fermez OpenChamber sur un autre appareil ou attendez une minute, puis touchez {label} pour réessayer.",
   'mobile.connect.notice.authExpired': 'L\'accès à {label} a expiré ou a été révoqué. Reconnectez-vous.',
   'mobile.connect.recovery.description': 'Connexion au serveur enregistré impossible. Vérifiez qu\'il est en marche ou choisissez une autre instance.',
   'mobile.connect.scanQr': 'Scanner le code QR',
@@ -3133,6 +3144,7 @@ export const dict = {
   'mobile.connect.splash.connectingTo': 'Connexion à l’appareil :',
   'mobile.connect.error.invalidUrl': 'Cette URL de serveur n\'est pas valide.',
   'mobile.connect.error.unreachable': 'Impossible de joindre ce serveur OpenChamber.',
+  'mobile.connect.error.relayLimit': "Le Relay a refusé la connexion : trop d'appareils ou de reconnexions. Fermez OpenChamber sur un autre appareil ou attendez une minute, puis réessayez.",
   'mobile.connect.error.authRequired': 'Ce serveur nécessite un mot de passe ou un jeton client.',
   'mobile.connect.error.passwordFailed': 'Impossible de déverrouiller ce serveur. Vérifiez le mot de passe.',
   'mobile.instances.addTitle': 'Ajouter une instance',

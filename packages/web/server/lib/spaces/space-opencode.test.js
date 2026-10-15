@@ -27,13 +27,13 @@ describe('the provider configuration inside a space', () => {
     expect(JSON.stringify(buildProviderConfig(GRANTS))).not.toContain('api.anthropic.com');
   });
 
-  it('writes the whole file over exec, as JSON on stdin, through a temporary name', async () => {
+  it('writes the whole file over exec, as JSON on stdin, through a temporary name, beside the project and not in the home directory', async () => {
     const calls = [];
     const opencode = createSpaceOpenCode({ exec: async (spaceId, argv, options) => { calls.push({ spaceId, argv, options }); return { code: 0, stdout: '', stderr: '' }; } });
     await opencode.writeProviderConfig(ID, GRANTS);
     expect(calls).toEqual([{
       spaceId: ID,
-      argv: ['/bin/sh', '-c', 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; mkdir -p /home/space/.config/opencode && cat > /home/space/.config/opencode/opencode.json.new && mv /home/space/.config/opencode/opencode.json.new /home/space/.config/opencode/opencode.json'],
+      argv: ['/bin/sh', '-c', 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; mkdir -p /spaces/a1b2c3d4e5f6/.opencode && cat > /spaces/a1b2c3d4e5f6/.opencode/opencode.json.new && mv /spaces/a1b2c3d4e5f6/.opencode/opencode.json.new /spaces/a1b2c3d4e5f6/.opencode/opencode.json && rm -f /home/space/.config/opencode/opencode.json'],
       options: { stdin: `${JSON.stringify(buildProviderConfig(GRANTS), null, 2)}\n` },
     }]);
   });

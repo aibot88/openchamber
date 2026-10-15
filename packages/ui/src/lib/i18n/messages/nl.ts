@@ -8,6 +8,7 @@ import { routingI18n } from './routing.i18n';
 import { pluginPanelI18n } from './plugin-panel.i18n';
 import { surfacePanelI18n } from './surface-panel.i18n';
 import { fileArtifactsI18n } from './file-artifacts.i18n';
+import { htmlRenderI18n } from './html-render.i18n';
 import { usageStatsI18n } from './usage-stats.i18n';
 import { webSearchI18n } from './websearch.i18n';
 import { isolatedSpacesI18n } from './isolated-spaces.i18n';
@@ -17,6 +18,7 @@ import { environmentI18n } from './environment.i18n';
 import { providersI18n } from './providers.i18n';
 import { mcpGridI18n } from './mcp-grid.i18n';
 import { pluginsGridI18n } from './plugins-grid.i18n';
+import { integrationsCatalogI18n } from './integrations-catalog.i18n';
 
 export const dict = {
   "opencodeCompatibility.bundled": "OpenCode is inbegrepen bij OpenChamber. Werk OpenChamber bij om OpenCode v2 te krijgen.",
@@ -135,6 +137,7 @@ export const dict = {
   ...pluginPanelI18n.nl,
   ...surfacePanelI18n.nl,
   ...fileArtifactsI18n.nl,
+  ...htmlRenderI18n.nl,
   ...usageStatsI18n.nl,
   ...webSearchI18n.nl,
   ...isolatedSpacesI18n.nl,
@@ -144,6 +147,7 @@ export const dict = {
   ...providersI18n.nl,
   ...mcpGridI18n.nl,
   ...pluginsGridI18n.nl,
+  ...integrationsCatalogI18n['nl'],
   'terminalView.actions.attachSelection': 'Geselecteerde uitvoer toevoegen',
   'terminalView.actions.copySelection': 'Geselecteerde uitvoer kopiëren',
   'terminalView.toast.selectionCopied': 'Uitvoer gekopieerd',
@@ -226,6 +230,7 @@ export const dict = {
   'mobile.connect.cancelPassword': 'Een andere server gebruiken',
   'mobile.connect.connecting': 'Verbinden...',
   'mobile.connect.notice.unreachable': '{label} niet bereikbaar. Controleer of de server draait.',
+  'mobile.connect.notice.relayLimit': "De Relay heeft de verbinding met {label} geweigerd: te veel apparaten of herverbindingen. Sluit OpenChamber op een ander apparaat of wacht een minuut en tik dan op {label} om het opnieuw te proberen.",
   'mobile.connect.notice.authExpired': 'De toegang tot {label} is verlopen of ingetrokken. Meld u opnieuw aan.',
   'mobile.connect.recovery.description': 'Kan geen verbinding maken met de opgeslagen server. Controleer of die draait of kies een andere instantie.',
   'mobile.connect.scanQr': 'QR-code scannen',
@@ -243,6 +248,7 @@ export const dict = {
   'mobile.connect.splash.connectingTo': 'Verbinden met apparaat:',
   'mobile.connect.error.invalidUrl': 'Die server-URL is ongeldig.',
   'mobile.connect.error.unreachable': 'Kan die OpenChamber-server niet bereiken.',
+  'mobile.connect.error.relayLimit': "De Relay heeft de verbinding geweigerd: te veel apparaten of herverbindingen. Sluit OpenChamber op een ander apparaat of wacht een minuut en probeer het dan opnieuw.",
   'mobile.connect.error.authRequired': 'Deze server vereist een wachtwoord of clienttoken.',
   'mobile.connect.error.passwordFailed': 'Kan die server niet ontgrendelen. Controleer het wachtwoord.',
   'mobile.instances.addTitle': 'Instantie toevoegen',
@@ -2274,6 +2280,7 @@ export const dict = {
   'session.newWorktree.toast.worktreeCreatedDescription': '{target} - wordt op de achtergrond opgezet',
   'session.newWorktree.toast.fetchSourceFailed': 'Kon niet van de remote ophalen — gemaakt vanuit de lokale status',
   'session.newWorktree.toast.fetchSourceAccess': 'Ophalen mislukt: de toegang tot deze repository vraagt aandacht in Repository configureren. Gemaakt vanuit de lokale status.',
+  'session.newWorktree.toast.branchBackup': '{branch} komt nu overeen met de remote. De vorige commits staan in {backup}.',
   'session.githubIntegration.tabs.pullRequests': 'Pull requests',
   'session.githubIntegration.validation.branchAlreadyCheckedOut': 'Branch is al uitgecheckt in een worktree',
   'session.githubIntegration.validation.failed': 'Kan niet valideren',
@@ -3014,6 +3021,7 @@ export const dict = {
   'desktopHostSwitcher.status.incompatible': 'Niet compatibel',
   'desktopHostSwitcher.status.wrongService': 'Verkeerde service',
   'desktopHostSwitcher.status.unreachable': 'Niet bereikbaar',
+  'desktopHostSwitcher.status.relayLimit': "Relay-limiet bereikt",
   'desktopHostSwitcher.status.unknown': 'Onbekend',
   'desktopHostSwitcher.status.ping': ' · {ms}ms ping',
   'desktopHostSwitcher.statusAria': 'Instantiestatus',
@@ -3077,6 +3085,10 @@ export const dict = {
   'desktopHostSwitcher.toast.sshConnected': 'SSH-instantie "{host}" verbonden',
   'desktopHostSwitcher.toast.sshFailedToConnect': 'Kan geen verbinding maken met SSH-instantie "{host}"',
   'desktopHostSwitcher.toast.instanceUnreachable': 'Instantie "{host}" is niet bereikbaar',
+  'desktopHostSwitcher.toast.relayLimit': "De Relay heeft de verbinding met \"{host}\" geweigerd: te veel apparaten of herverbindingen. Sluit OpenChamber op een ander apparaat of wacht een minuut en probeer het dan opnieuw.",
+  'relayConnection.limitReached.title': "De Relay heeft de verbinding geweigerd",
+  'relayConnection.limitReached.description': "Te veel apparaten of herverbindingen voor deze instantie. Sluit OpenChamber op een ander apparaat of wacht een minuut en probeer het dan opnieuw.",
+  'relayConnection.limitReached.retry': "Opnieuw proberen",
   'miniChat.header.newSession': 'Nieuwe sessie',
   'miniChat.header.session': 'Sessie',
   'miniChat.header.defaultAgent': 'Standaardagent',

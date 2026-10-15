@@ -152,6 +152,7 @@ export function SidebarHeader(props: Props): React.ReactNode {
   const isSourceBoardOpen = useUIStore((state) => state.isSourceBoardOpen);
   const isScheduledOpen = useUIStore((state) => state.isScheduledTasksDialogOpen);
   const isArchiveOpen = useUIStore((state) => state.isArchivePageOpen);
+  const isIntegrationsCatalogOpen = useUIStore((state) => state.isIntegrationsCatalogOpen);
   const openGuestPageId = useUIStore((state) => state.openGuestPageId);
 
   const showChatsSection = useSessionDisplayStore((state) => state.showChatsSection);
@@ -371,6 +372,15 @@ export function SidebarHeader(props: Props): React.ReactNode {
                 className={headerActionButtonClass}
               >
                 <Icon name="archive" className={headerActionIconClass} />
+              </SidebarPageButton>
+
+              <SidebarPageButton
+                label={t('integrationsCatalog.sidebar.open')}
+                pressed={isIntegrationsCatalogOpen}
+                onClick={() => useUIStore.getState().setIntegrationsCatalogOpen(!isIntegrationsCatalogOpen)}
+                className={headerActionButtonClass}
+              >
+                <Icon name="plug-2" className={headerActionIconClass} />
               </SidebarPageButton>
             </div>
             {guestPagesInline ? guestPages.map((guest) => {

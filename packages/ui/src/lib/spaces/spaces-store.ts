@@ -92,9 +92,8 @@ type SpacesState = {
   customProviders: ReadonlyMap<string, readonly SpaceCustomProvider[]>;
   noteCustomProviders: (projectDirectory: string, providers: readonly SpaceCustomProvider[]) => void;
   /** The grant dialog, open on one space and, when opened for a missing key, on its provider. */
-  /** `domain` is a name to offer in the network field, from a refusal that named it. */
-  accessDialog: { spaceId: string; providerId: string | null; domain?: string } | null;
-  openAccessDialog: (spaceId: string, providerId?: string | null, domain?: string) => void;
+  accessDialog: { spaceId: string; providerId: string | null } | null;
+  openAccessDialog: (spaceId: string, providerId?: string | null) => void;
   closeAccessDialog: () => void;
   /** The action under way or failed per space, in this window, for the group's status line and menu. */
   actions: ReadonlyMap<string, SpaceActionState>;
@@ -205,7 +204,7 @@ export const useSpacesStore = create<SpacesState>((set, get) => ({
     return { customProviders };
   }),
   accessDialog: null,
-  openAccessDialog: (spaceId, providerId = null, domain) => set({ accessDialog: domain === undefined ? { spaceId, providerId } : { spaceId, providerId, domain } }),
+  openAccessDialog: (spaceId, providerId = null) => set({ accessDialog: { spaceId, providerId } }),
   closeAccessDialog: () => set({ accessDialog: null }),
   actions: new Map(),
   noteAction: (spaceId, state) => set((current) => {

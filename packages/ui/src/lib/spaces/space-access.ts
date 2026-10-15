@@ -34,11 +34,9 @@ export const spaceAccessNoticeOf = (entry: SpaceEntry | undefined): SpaceAccessN
   if (!entry || entry.state !== 'running') return null;
   if (entry.access === 'unknown') return { kind: 'unknown' };
   const models = entry.grants.filter((grant) => grant.kind === 'model' || grant.kind === 'login' || grant.kind === 'custom');
-  // With the open internet the space reaches opencode.ai, whose free models answer with no key,
-  // so "no access to any model" would be false there; a model that does need a key is refused
-  // at send time, by name. With an allowlist no model answers without a grant, and a network the
-  // host could not read is unknown, never open.
-  if (models.length === 0) return entry.network?.mode === 'open' ? null : { kind: 'no_model' };
+  // Whatever the network: OpenCode's free models refuse a request from inside a space, measured
+  // on 2026-10-14 with the open internet ("free tier can only be used from within OpenCode").
+  if (models.length === 0) return { kind: 'no_model' };
   const providers = models.filter((grant) => entry.needsAccess.includes(grant.id)).map((grant) => grant.provider);
   return providers.length > 0 ? { kind: 'needs_again', providers } : null;
 };
