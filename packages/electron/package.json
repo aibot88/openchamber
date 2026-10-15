@@ -198,7 +198,7 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "openchamber",
+      "owner": "aibot88",
       "repo": "openchamber"
     }
   }
