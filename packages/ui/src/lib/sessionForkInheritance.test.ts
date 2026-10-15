@@ -69,6 +69,12 @@ describe('withoutSourceOwnedLinks', () => {
     expect(withoutSourceOwnedLinks({ other: 1, openchamber: { kind: 'scheduled' } })).toEqual({ other: 1 });
   });
 
+  test('a new fork drops the source side-chat boundary but keeps its goal', () => {
+    expect(withoutSourceOwnedLinks({ openchamber: {
+      sideChatBoundary: { id: 'old-clone', role: 'user', time: { created: 1 } }, goal: goal(false),
+    } })).toEqual({ openchamber: { goal: goal(false) } });
+  });
+
   test('keeps a review marker and returns the same object when nothing changes', () => {
     const metadata: Metadata = { openchamber: { kind: 'review', originalSessionID: 'ses_parent', goal: goal(false) } };
     expect(withoutSourceOwnedLinks(metadata)).toBe(metadata);

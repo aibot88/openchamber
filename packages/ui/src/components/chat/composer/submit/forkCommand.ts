@@ -1,11 +1,11 @@
 /**
- * `/fork [text]`: fork the current session after its last finished turn, open
- * the fork, and send the text there. The source session, including a turn it
- * is still running, is never touched.
+ * `/fork [text]` and `/sidechat [text]`: fork after the last finished turn,
+ * open the fork in the caller's column, and send the text there. The source
+ * session and its running turn stay unchanged.
  *
  * A failed fork throws so the composer restores the command and reports it.
  * A fork that succeeded but whose send failed must not lose the text: it goes
- * into the fork's composer, where the user now is.
+ * into the fork's composer.
  */
 
 import type { Session } from '@/lib/opencode/model';
@@ -41,12 +41,12 @@ export async function runForkCommand(
     if (!text) return 'forked';
 
     const directory = deps.directoryFor(forked);
+    const target = deps.draftIdentity(directory, forked.id);
     try {
         await deps.send(text, selection, { sessionId: forked.id, directory: directory ?? undefined });
         return 'sent';
     } catch (error) {
-        console.error('Failed to send the /fork message:', error);
-        const target = deps.draftIdentity(directory, forked.id);
+        console.error('Failed to send the fork message:', error);
         if (target) deps.restoreText(target, text);
         return 'send-failed';
     }

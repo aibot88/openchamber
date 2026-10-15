@@ -19,10 +19,14 @@ export const resolvePinnedComposerSelection = ({ savedAgent, savedModel, savedVa
     const recordModel = record?.model?.providerID && record.model.id
         ? { providerId: record.model.providerID, modelId: record.model.id }
         : null;
+    const model = savedModel ?? recordModel;
+    const inheritsRecordModel = model?.providerId === recordModel?.providerId
+        && model?.modelId === recordModel?.modelId;
     return {
         agent: savedAgent ?? (record?.agent?.trim() || undefined),
-        model: savedModel ?? recordModel,
-        variant: savedVariant !== undefined ? savedVariant : record?.model?.variant?.trim() || undefined,
+        model,
+        variant: savedVariant !== undefined ? savedVariant
+            : inheritsRecordModel ? record?.model?.variant?.trim() || undefined : undefined,
     };
 };
 

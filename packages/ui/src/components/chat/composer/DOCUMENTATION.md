@@ -1,5 +1,13 @@
 # Composer
 
+Side chats keep forked context for the model, but the side-panel transcript
+shows only messages sent after the fork. The durable inherited-history marker
+and pagination rules are owned by `lib/sessionSideChatMetadata.ts` and described
+in `sync/DOCUMENTATION.md`, "Pinned chat columns".
+The pinned composer inherits a session-record effort only for that record's
+model. Selecting another model with no saved effort uses its default, rather
+than sending the previous model's effort name.
+
 The chat composer: the prompt language, the editor that renders it, and
 everything between typing and sending.
 
@@ -527,7 +535,7 @@ and the send path reading the same grammar.
   name as their badge, and the language highlights them as known `/tokens`.
 - Local slash commands are planned by `submit/slashCommands.ts` before any
   attached context is consumed. Commands that act on session or UI state
-  (`/undo`, `/redo`, `/compact`, `/timeline`, `/handoff-review`, `/fork`) take
+  (`/undo`, `/redo`, `/compact`, `/timeline`, `/handoff-review`, `/fork`, `/sidechat`) take
   only their command text and leave comments, files, and linked context attached;
    magic prompt commands send that
   context with the prompt they produce. Session actions are planned only when
@@ -645,6 +653,34 @@ Existing panels hide titles. Promotion retains the existing internal title, with
 transcript fetching or Small Model generation.
 
 ## Pinned composer
+
+`/sidechat [text]` opens a fork after the source's last finished turn in the
+context panel. The assistant answer's branch menu also offers "Side chat from
+here", which keeps that answer in the fork. Both use the existing fork actions
+with a panel opener, preserving the main selection, queue and attached context.
+The menu also preserves the main draft; the command consumes its own input.
+Optional command text is sent only to the fork. Before sending, `/fork` and
+`/sidechat` capture the fork's draft identity in the submitting runtime, so a
+rejected send restores text to that identity even after a runtime switch.
+With no finished turn the command reports the same error as `/fork` and leaves
+its text available to retry.
+
+The tab belongs to the main chat's directory captured before creation; its
+target directory is the fork's server-returned directory. Closing the tab or
+panel preserves the session, which remains in the session list and can be
+opened as the main chat or reopened with "Open in side panel". It uses the
+chat surface's existing zone placement and resize controls. This is a normal
+fork with the usual agent permissions and a shared working directory. Its
+inherited active goal is paused by the ordinary fork metadata repair.
+Mini Chat and peek surfaces do not offer side-chat actions or run the command.
+
+| Runtime | Side chat |
+|---|---|
+| Web, full layout | Fork in the context panel with its own composer |
+| Electron desktop | Same shared UI and fork behavior |
+| VS Code | No side-chat entry; a typed command reports unavailable and stays in the composer |
+| Hosted mobile | Same unsupported command behavior; `/btw` remains available |
+| Capacitor mobile | Same unsupported command behavior; `/btw` remains available |
 
 A chat pinned in the side panel has a composer of its own next to the main
 chat's (see the sync documentation, *Pinned chat columns*). What used to be

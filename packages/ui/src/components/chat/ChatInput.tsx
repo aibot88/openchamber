@@ -193,6 +193,7 @@ import {
     planLocalSlashCommand,
 } from './composer/submit/slashCommands';
 import { runForkCommand } from './composer/submit/forkCommand';
+import { forkSideChat, isSideChatAvailable } from '@/lib/sideChat';
 import { useAutocompletePosition } from './composer/state/useAutocompletePosition';
 import { useMessageHistory } from './composer/state/useMessageHistory';
 import { useComposerDraft } from './composer/state/useComposerDraft';
@@ -403,6 +404,8 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
     draftPresentationExiting = false,
 }) => {
     const { t } = useI18n();
+    const chatSurfaceMode = useChatSurfaceMode();
+    const isMiniChatSurface = chatSurfaceMode === 'mini-chat';
     // The session this composer belongs to: its column's (see
     // chatColumnSession.ts); outside a column it follows the live selection.
     const chatColumnSession = useChatColumnSession();
@@ -864,7 +867,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
     const availableSkills = useSkillsStore((s) => selectSkillsForDirectory(s, currentDirectory));
     const knownSlashNames = React.useMemo(() => {
         const names = new Set<string>([
-            'init', 'review', 'undo', 'redo', 'timeline', 'compact', 'fork', 'btw', 'summary', 'workspace-review', 'plan-feature', 'craft-goal', 'schedule-task', 'catch-up', 'debug', 'weigh', 'explore',
+            'init', 'review', 'undo', 'redo', 'timeline', 'compact', 'fork', 'sidechat', 'btw', 'summary', 'workspace-review', 'plan-feature', 'craft-goal', 'schedule-task', 'catch-up', 'debug', 'weigh', 'explore',
         ]);
         if (!isMobile && !isVSCodeRuntime()) names.add('handoff-review');
         for (const command of availableCommands) names.add(command.name.toLowerCase());
@@ -1639,6 +1642,10 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
             if (!commandIsAvailable) commandPlan = null;
         }
         if (commandPlan?.command.name === 'handoff-review' && (isMobile || isVSCodeRuntime())) commandPlan = null;
+        if (commandPlan?.command.name === 'sidechat' && (!isSideChatAvailable(isMobile) || chatSurfaceMode !== 'default')) {
+            toast.error(t('chat.chatInput.toast.sideChatUnavailable'));
+            return;
+        }
 
         // Enter BTW before sending so the question uses its isolated selections.
         // A bare command waits for input; an argument requests one immediate send.
@@ -1812,7 +1819,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                     openTimelineDialog();
                 } else if (actionName === 'handoff-review') {
                     setReviewDialogOpen(true);
-                } else if (actionName === 'fork') {
+                } else if (actionName === 'fork' || actionName === 'sidechat') {
                     const forkOutcome = await runForkCommand(currentSessionId, commandPlan.command.argument, {
                         // The fork branches the main session, so it keeps that session's
                         // selection even while the btw panel owns the composer.
@@ -1821,7 +1828,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                         agent: capturedSendConfig?.agent ?? currentAgentName,
                         variant: capturedSendConfig?.variant ?? currentVariant ?? undefined,
                     }, {
-                        fork: sessionActions.forkFromLastCompletedTurn,
+                        fork: actionName === 'sidechat' ? forkSideChat : sessionActions.forkFromLastCompletedTurn,
                         directoryFor: (session) => useSessionUIStore.getState().getDirectoryForSession(session.id) || session.directory || null,
                         send: (text, selection, target) => useSessionUIStore.getState().sendMessage(
                             text,
@@ -1835,7 +1842,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                             'normal',
                             target,
                         ),
-                        draftIdentity: (directory, sessionId) => createChatDraftIdentity(getRuntimeKey(), directory, sessionId),
+                        draftIdentity: (directory, sessionId) => createChatDraftIdentity(submitRuntimeKey, directory, sessionId),
                         restoreText: (target, text) => useInputStore.setState({ pendingComposerRestore: { target, text, files: [] } }),
                     });
                     if (forkOutcome === 'send-failed') toast.error(t('chat.chatInput.toast.forkSendFailed'));
@@ -1846,7 +1853,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                 }
             } catch (error) {
                 restoreComposerText();
-                if (actionName === 'fork') {
+                if (actionName === 'fork' || actionName === 'sidechat') {
                     toast.error(error instanceof sessionActions.NothingToForkError
                         ? t('chat.chatInput.toast.forkNothingToFork')
                         : getSubmitErrorMessage(error, t('chat.chatInput.toast.forkFailed')));
@@ -3684,8 +3691,6 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
         useDirectoryStore.getState().setDirectory(worktreePath, { showOverlay: false });
     }, [newWorktreeProject]);
 
-    const chatSurfaceMode = useChatSurfaceMode();
-    const isMiniChatSurface = chatSurfaceMode === 'mini-chat';
     const showDesktopDraftPresentation = (newSessionDraftOpen || draftPresentationExiting)
         && !isDesktopExpanded
         && !isMobile

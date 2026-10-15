@@ -2032,8 +2032,9 @@ describe("forkFromMessage composer restore", () => {
         part: { "message-fork": [textPart, filePart] },
       })
       const sourceInput = { ...inputState }
+      const target = directory === sourceSession.directory ? source : createStore({})
       const { forkFromMessage, setActionRefs } = await import("./session-actions")
-      setActionRefs(createChildStores([[sourceSession.directory, source]]), () => "/other/project")
+      setActionRefs(createChildStores([[sourceSession.directory, source], [directory, target]]), () => "/other/project")
 
       await forkFromMessage(sourceSession.id, "message-fork")
 
@@ -2051,7 +2052,8 @@ describe("forkFromMessage composer restore", () => {
       expect(inputState.attachedFiles).toBe(sourceInput.attachedFiles)
       expect(inputState.attachedFiles).toHaveLength(1)
       expect(selectedSessions).toEqual([{ sessionId: forkedSession.id, directoryHint: directory }])
-      expect(source.getState().session).toEqual([sourceSession, sessionForkResult])
+      expect(target.getState().session.find((session) => session.id === forkedSession.id)).toEqual(sessionForkResult)
+      if (target !== source) expect(source.getState().session).toEqual([sourceSession])
     })
   }
 
@@ -2077,8 +2079,9 @@ describe("forkFromMessage composer restore", () => {
     }
     sessionForkResult = forkWithProject
     const source = createStore({}, { session: [sourceSession], part: { "message-fork": [textPart] } })
+    const target = createStore({})
     const { forkFromMessage, setActionRefs } = await import("./session-actions")
-    setActionRefs(createChildStores([[sourceSession.directory, source]]), () => sourceSession.directory)
+    setActionRefs(createChildStores([[sourceSession.directory, source], ["/canonical/worktree", target]]), () => sourceSession.directory)
 
     await forkFromMessage(sourceSession.id, "message-fork")
 
@@ -2174,6 +2177,8 @@ describe("forkAfterMessage", () => {
   beforeEach(() => {
     replyCalls.length = 0
     selectedSessions.length = 0
+    registeredSessionDirectories.length = 0
+    globalUpsertedSessions.length = 0
     runtimeKey = "fork-runtime"
     sessionForkResult = forkedSession
     sessionForkError = null
@@ -2195,6 +2200,89 @@ describe("forkAfterMessage", () => {
     expect(selectedSessions).toEqual([{ sessionId: forkedSession.id, directoryHint: sourceSession.directory }])
     expect(source.getState().session).toEqual([sourceSession, forkedSession])
     expect(inputState.pendingComposerRestore).toBeNull()
+  })
+
+  test("a side-panel opener leaves main selection and composer state alone", async () => {
+    const source = createStore({}, { session: [sourceSession], message: { [sourceSession.id]: transcript } })
+    const { forkAfterMessage, setActionRefs } = await import("./session-actions")
+    setActionRefs(createChildStores([[sourceSession.directory, source]]), () => sourceSession.directory)
+    inputState.pendingInputText = "main draft"
+    const opened: Array<{ session: Session; directory: string | null | undefined }> = []
+
+    const result = await forkAfterMessage(sourceSession.id, "msg-answer-1", (session, directory) => {
+      opened.push({ session, directory })
+    })
+
+    expect(result).toBe(forkedSession)
+    expect(opened).toEqual([{ session: forkedSession, directory: sourceSession.directory }])
+    expect(selectedSessions).toEqual([])
+    expect(inputState.pendingInputText).toBe("main draft")
+    expect(inputState.pendingComposerRestore).toBeNull()
+    expect(globalUpsertedSessions).toEqual([forkedSession])
+    expect(registeredSessionDirectories).toEqual([{ sessionID: forkedSession.id, directory: sourceSession.directory }])
+    expect(source.getState().message[sourceSession.id]).toBe(transcript)
+    expect(source.getState().sessionEventRevision?.[forkedSession.id] ?? 0).toBeGreaterThan(0)
+  })
+
+  test("publishes a canonicalized fork in its own directory before opening it", async () => {
+    const source = createStore({}, { session: [sourceSession], message: { [sourceSession.id]: transcript } })
+    const target = createStore({})
+    sessionForkResult = { ...forkedSession, directory: "/canonical/project" }
+    const { forkAfterMessage, setActionRefs } = await import("./session-actions")
+    setActionRefs(createChildStores([[sourceSession.directory, source], [sessionForkResult.directory, target]]), () => sourceSession.directory)
+    const opened: string[] = []
+
+    await forkAfterMessage(sourceSession.id, "msg-answer-1", (session, directory) => {
+      expect(target.getState().session.find((item) => item.id === session.id)).toEqual(session)
+      opened.push(directory ?? "")
+    })
+
+    expect(opened).toEqual(["/canonical/project"])
+    expect(source.getState().session).toEqual([sourceSession])
+    expect(selectedSessions).toEqual([])
+  })
+
+  test("a failed fork never opens a side panel or changes local sessions", async () => {
+    const source = createStore({}, { session: [sourceSession], message: { [sourceSession.id]: transcript } })
+    sessionForkError = new Error("fork failed")
+    const { forkAfterMessage, setActionRefs } = await import("./session-actions")
+    setActionRefs(createChildStores([[sourceSession.directory, source]]), () => sourceSession.directory)
+    const opened: Session[] = []
+
+    await expect(forkAfterMessage(sourceSession.id, "msg-answer-1", (session) => { opened.push(session) })).rejects.toThrow("fork failed")
+
+    expect(opened).toEqual([])
+    expect(source.getState().session).toEqual([sourceSession])
+    expect(globalUpsertedSessions).toEqual([])
+    expect(selectedSessions).toEqual([])
+  })
+
+  test("a stale fork cannot open a panel in another runtime", async () => {
+    const source = createStore({}, { session: [sourceSession], message: { [sourceSession.id]: transcript } })
+    beforeSessionForkResolve = () => { runtimeKey = "another-runtime" }
+    const { forkAfterMessage, setActionRefs } = await import("./session-actions")
+    setActionRefs(createChildStores([[sourceSession.directory, source]]), () => sourceSession.directory)
+    const opened: Session[] = []
+
+    expect(await forkAfterMessage(sourceSession.id, "msg-answer-1", (session) => { opened.push(session) })).toBeNull()
+
+    expect(opened).toEqual([])
+    expect(source.getState().session).toEqual([sourceSession])
+    expect(globalUpsertedSessions).toEqual([])
+    expect(registeredSessionDirectories).toEqual([])
+  })
+
+  test("a runtime switch after opening the fork prevents a follow-up send", async () => {
+    const source = createStore({}, { session: [sourceSession], message: { [sourceSession.id]: transcript } })
+    const { forkAfterMessage, setActionRefs } = await import("./session-actions")
+    setActionRefs(createChildStores([[sourceSession.directory, source]]), () => sourceSession.directory)
+
+    const result = await forkAfterMessage(sourceSession.id, "msg-answer-1", () => {
+      runtimeKey = "another-runtime"
+    })
+
+    expect(result).toBeNull()
+    expect(selectedSessions).toEqual([])
   })
 
   test("leaves a compaction that followed the answer out of the fork", async () => {
@@ -2286,6 +2374,22 @@ describe("forkFromLastCompletedTurn", () => {
     const { findLastCompletedTurnMessageId } = await import("./session-actions")
     const transcript = [message("u1", "user"), message("a1", "assistant", 2)]
     expect(findLastCompletedTurnMessageId(transcript, false)).toBe("a1")
+  })
+
+  test("opens the last completed turn in the supplied column without selecting it", async () => {
+    const source = createStore({}, {
+      session: [sourceSession],
+      message: { [sourceSession.id]: [message("u1", "user"), message("a1", "assistant", 2)] },
+      session_status: { [sourceSession.id]: { type: "idle" } },
+    })
+    const { forkFromLastCompletedTurn, setActionRefs } = await import("./session-actions")
+    setActionRefs(createChildStores([[sourceSession.directory, source]]), () => sourceSession.directory)
+    const opened: string[] = []
+
+    await forkFromLastCompletedTurn(sourceSession.id, (session) => { opened.push(session.id) })
+
+    expect(opened).toEqual(["session-fork"])
+    expect(selectedSessions).toEqual([])
   })
 
   test("refuses when no turn has finished", async () => {

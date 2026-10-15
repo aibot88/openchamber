@@ -35,6 +35,18 @@ const localeDictionaries = {
 } as const;
 
 describe('i18n dictionaries', () => {
+  test('side chat actions, commands and availability are translated in every locale', () => {
+    for (const key of [
+      'chat.messageBody.actions.sideChat',
+      'chat.commandAutocomplete.command.sideChatDescription',
+      'chat.chatInput.toast.sideChatUnavailable',
+    ] as const) {
+      for (const [locale, dictionary] of Object.entries(localeDictionaries)) {
+        expect(dictionary[key]).toBeTruthy();
+        if (locale !== 'en') expect(dictionary[key]).not.toBe(enDict[key]);
+      }
+    }
+  });
   test('anonymous transport has a translated read-only label in every locale', () => {
     const key = 'settings.sourceControl.transport.anonymous';
     expect(enDict[key]).toBe('Anonymous HTTPS, read-only');

@@ -109,6 +109,7 @@ import { ensureSpaceArchives, useSpaceArchiveOf } from '@/lib/spaces/space-archi
 import { getRuntimeKey } from '@/lib/runtime-switch';
 import { createFirstVisibleSessionPerformanceTracker } from '@/sync/session-load-performance';
 import { isChatDirectoryPath } from '@/lib/chatDirectories';
+import { filterSideChatMessages, getSideChatBoundary } from '@/lib/sessionSideChatMetadata';
 
 const EMPTY_MESSAGES: Array<{ info: Message; parts: Part[] }> = [];
 const IDLE_SESSION_STATUS = { type: 'idle' as const };
@@ -903,7 +904,15 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
         suspendPartUpdates: Boolean(streamingMessageId),
         suspendPartUpdatesForMessageId: streamingMessageId,
     });
-    const sessionMessages = currentSessionId ? sessionMessageRecords : EMPTY_MESSAGES;
+    const currentSession = useSession(currentSessionId, effectiveSessionDirectory);
+    const sideChatBoundary = React.useMemo(
+        () => pinned ? getSideChatBoundary(currentSession?.metadata) : null,
+        [pinned, currentSession?.metadata],
+    );
+    const sessionMessages = React.useMemo(
+        () => currentSessionId ? filterSideChatMessages(sessionMessageRecords, sideChatBoundary) : EMPTY_MESSAGES,
+        [currentSessionId, sessionMessageRecords, sideChatBoundary],
+    );
     const authSessionExpired = useAuthSessionStore((store) => store.state !== 'ok');
     const wasAuthExpiredRef = React.useRef(false);
     const sessionMessageLoadState = useSessionMessageLoadState(
@@ -1010,10 +1019,11 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
         if (!currentSessionId) return null;
         return {
             limit: sessionMessages.length,
-            complete: sessionMessageLoadState.complete || !sessionMessageLoadState.cursor,
+            complete: sessionMessageLoadState.complete || !sessionMessageLoadState.cursor
+                || sessionMessages.length < sessionMessageRecords.length,
             loading: sessionMessageLoadState.status === 'loading',
         };
-    }, [currentSessionId, sessionMessageLoadState.complete, sessionMessageLoadState.cursor, sessionMessageLoadState.status, sessionMessages.length]);
+    }, [currentSessionId, sessionMessageLoadState.complete, sessionMessageLoadState.cursor, sessionMessageLoadState.status, sessionMessages.length, sessionMessageRecords]);
 
     const { isMobile } = useDeviceInfo();
     const isVSCode = isVSCodeRuntime();
@@ -1091,7 +1101,6 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
     }, [pinned, setWorkStatusPanelVisible, showWorkStatusPanel]);
     const messageListRef = React.useRef<MessageListHandle | null>(null);
 
-    const currentSession = useSession(currentSessionId, effectiveSessionDirectory);
     const parentSession = useParentSession(currentSessionId, effectiveSessionDirectory);
 
     // A pinned column hides "Return to parent" on the session it was opened
@@ -1673,7 +1682,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
             return <DraftWelcome exiting={draftPresentationExiting} />;
         }
 
-        const showHydrationSkeleton = isSessionHydrating && sessionMessages.length === 0 && !sessionIsWorking;
+        const showHydrationSkeleton = isSessionHydrating && sessionMessageRecords.length === 0 && !sessionIsWorking;
         if (showHydrationSkeleton) {
             if (sessionMessageLoadState.status === 'error') {
                 return (
@@ -1798,7 +1807,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
 			// App-wide handlers (double Escape to stop) find the pinned
 			// column's session and whether it runs here.
 			data-chat-column={pinned ? 'pinned' : 'main'}
-			data-chat-session-id={pinned ? currentSessionId ?? undefined : undefined}
+			data-chat-session-id={currentSessionId ?? undefined}
 			data-chat-working={pinned && sessionIsWorking ? 'true' : undefined}
 			className="flex h-full min-h-0 bg-background"
 		>
@@ -1832,6 +1841,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
 						sessionId={currentSessionId}
 						scrollNode={scrollNode}
 						focusRequest={chatSearch.focusRequest}
+						boundary={sideChatBoundary}
 						onClose={closeChatSearch}
 					/>
 				</div>
@@ -1971,6 +1981,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
 
             <TimelineDialog
                 open={isTimelineDialogOpen}
+                boundary={sideChatBoundary}
                 onOpenChange={setTimelineDialogOpen}
                 onScrollToMessage={timelineController.scrollToMessage}
                 onScrollByTurnOffset={navigation.scrollByTurnOffset}

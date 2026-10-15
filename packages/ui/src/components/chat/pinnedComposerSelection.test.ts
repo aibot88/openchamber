@@ -32,6 +32,21 @@ describe('pinned composer selection', () => {
         expect(resolvePinnedComposerSelection({ savedAgent: null, savedModel: null, savedVariant: null, record }).variant).toBeNull();
     });
 
+    test('changing model never inherits the previous model effort', () => {
+        const source = { agent: 'build', model: { providerID: 'openai', id: 'gpt', variant: 'xhigh' } };
+        expect(resolvePinnedComposerSelection({
+            savedAgent: 'build', savedModel: { providerId: 'opencode-go', modelId: 'deepseek-v4.1-flash' },
+            savedVariant: undefined, record: source,
+        }).variant).toBeUndefined();
+    });
+
+    test('the same saved model retains the record effort until explicitly changed', () => {
+        expect(resolvePinnedComposerSelection({
+            savedAgent: 'build', savedModel: { providerId: 'anthropic', modelId: 'claude' },
+            savedVariant: undefined, record,
+        }).variant).toBe('high');
+    });
+
     test('a session without a record or picks has no model of its own', () => {
         expect(resolvePinnedComposerSelection({ savedAgent: null, savedModel: null, savedVariant: undefined, record: undefined })).toEqual({
             agent: undefined,

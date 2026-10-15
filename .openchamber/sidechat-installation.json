@@ -1,0 +1,20 @@
+{
+  "installed": "/Applications/OpenChamber.app",
+  "source": "/Users/aibot/.config/openchamber/chats/2026-10-12/session-0b31088d-1205-44ff-b781-ebb0050e8974/openchamber/packages/electron/dist/mac-arm64/OpenChamber.app",
+  "backup": "/Users/aibot/Library/Application Support/OpenChamber Backups/sidechat-history-2026-10-12T07-18-19.247Z/OpenChamber.app",
+  "state": "installed-restart-required",
+  "profileDirectoriesChanged": false,
+  "version": "2.2.0",
+  "originalAsarSha256": "339ca19ac49b6fdc1c97ba4d8ee4f401e13caf29803fb7e0ecc35b47c15b5067",
+  "newAsarSha256": "b3c9a50502f88a406a364cba957524020b19e067336464d792c72f7c529437fa",
+  "newIndexSha256": "5837829e8c143d5e49cfcca1d8e8e7c157d3a0305ef2bb4e8e15f78506899394",
+  "processes": [
+    {
+      "pid": 33940,
+      "executable": "/Applications/OpenChamber.app/Contents/MacOS/OpenChamber"
+    }
+  ],
+  "originalReleaseBackup": "/Users/aibot/Library/Application Support/OpenChamber Backups/sidechat-2026-10-12T05-44-46-058Z/OpenChamber.app",
+  "installedAt": "2026-10-12T07:18:23.841Z",
+  "runningProcessStillUsesPreviousRenderer": true
+}

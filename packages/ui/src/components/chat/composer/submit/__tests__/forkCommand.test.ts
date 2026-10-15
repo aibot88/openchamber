@@ -64,4 +64,20 @@ describe('runForkCommand', () => {
         expect(await runForkCommand('session-a', 'text', selection, deps)).toBe('stale');
         expect(sends).toEqual([]);
     });
+
+    test('a failed send restores text to the runtime captured before sending', async () => {
+        let runtimeKey = 'source-runtime';
+        const { deps, restores } = createDeps({
+            draftIdentity: (directory, sessionId) => directory ? { runtimeKey, directory, sessionId } : null,
+            send: async () => {
+                runtimeKey = 'other-runtime';
+                throw new Error('runtime changed');
+            },
+        });
+        expect(await runForkCommand('session-a', 'side question', selection, deps)).toBe('send-failed');
+        expect(restores).toEqual([{
+            target: { runtimeKey: 'source-runtime', directory: '/repo', sessionId: 'session-fork' },
+            text: 'side question',
+        }]);
+    });
 });

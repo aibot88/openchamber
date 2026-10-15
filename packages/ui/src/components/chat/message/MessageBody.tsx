@@ -68,6 +68,7 @@ import { isCapacitorMobileApp } from '@/apps/mobileNativeChrome';
 import { shareFileFromNativeApp } from '@/lib/nativeFileShare';
 import { WorktreeRequiresGitRepositoryError } from '@/lib/worktrees/worktreeCreate';
 import { buildTurnImageExportSource, cloneMessageImageExportSource } from './imageExport';
+import { forkSideChat, isSideChatAvailable } from '@/lib/sideChat';
 
 
 const CONTAIN_LAYOUT_STYLE = { contain: 'layout' as const, transform: 'translateZ(0)' };
@@ -1451,6 +1452,14 @@ const AssistantMessageBody = React.memo(({
         void useSessionUIStore.getState().forkAfterMessage(sessionId, messageId);
     }, [messageId, sessionId]);
 
+    const canForkSideChat = isSideChatAvailable(isMobile) && chatSurfaceMode === 'default';
+    const handleSideChatFromHere = React.useCallback(() => {
+        if (!sessionId) return;
+        void forkSideChat(sessionId, messageId).catch(() => {
+            toast.error(t('chat.chatInput.toast.forkFailed'));
+        });
+    }, [messageId, sessionId, t]);
+
     const handleForkMultiRun = React.useCallback(
         () => {
             if (!assistantPlanText.trim()) {
@@ -2223,6 +2232,15 @@ const AssistantMessageBody = React.memo(({
             });
         }
         if (!isMiniChatSurface && !isReviewSessionView) {
+            if (canForkSideChat) {
+                actions.push({
+                    id: 'sidechat-from-here',
+                    onPointerRow: true,
+                    label: t('chat.messageBody.actions.sideChat'),
+                    icon: <Icon name="chat-ai-3" className="h-3.5 w-3.5" />,
+                    onSelect: handleSideChatFromHere,
+                });
+            }
             actions.push({
                 id: 'fork-from-here',
                 onPointerRow: true,
@@ -2244,7 +2262,7 @@ const AssistantMessageBody = React.memo(({
             }
         }
         return actions;
-    }, [assistantPlanText, canUseProjectPlanActions, contextPinPending, contextPinned, currentProjectRef, extraActions, handleForkClick, handleForkFromHere, handleSaveAsPlanClick, hasCopyableText, isFooterTTSPlaying, isMiniChatSurface, isReviewSessionView, onCopyFooter, onCopyLink, onToggleContextPin, playFooterTTS, reviewTransferAction, shareTurnAsImage, showMessageTTSButtons, stopFooterTTS, t]);
+    }, [assistantPlanText, canForkSideChat, canUseProjectPlanActions, contextPinPending, contextPinned, currentProjectRef, extraActions, handleForkClick, handleForkFromHere, handleSideChatFromHere, handleSaveAsPlanClick, hasCopyableText, isFooterTTSPlaying, isMiniChatSurface, isReviewSessionView, onCopyFooter, onCopyLink, onToggleContextPin, playFooterTTS, reviewTransferAction, shareTurnAsImage, showMessageTTSButtons, stopFooterTTS, t]);
 
     const footerMenuActions = footerSheetActions.filter((action) => !action.onPointerRow);
 
@@ -2293,6 +2311,12 @@ const AssistantMessageBody = React.memo(({
                         <TooltipContent sideOffset={6}>{t('chat.messageBody.actions.branchMenu')}</TooltipContent>
                     </Tooltip>
                     <DropdownMenuContent align="end" onPointerDown={(event) => event.stopPropagation()}>
+                        {canForkSideChat ? (
+                            <DropdownMenuItem className="typography-meta" onSelect={handleSideChatFromHere}>
+                                <Icon name="chat-ai-3" className="h-3.5 w-3.5" />
+                                {t('chat.messageBody.actions.sideChat')}
+                            </DropdownMenuItem>
+                        ) : null}
                         <DropdownMenuItem className="typography-meta" onSelect={handleForkFromHere}>
                             <Icon name="git-branch" className="h-3.5 w-3.5" />
                             {t('chat.messageBody.actions.fork')}

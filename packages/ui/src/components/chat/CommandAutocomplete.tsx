@@ -13,6 +13,8 @@ import { useMobileAutocompleteMaxHeight } from './useMobileAutocompleteMaxHeight
 import { mergeCommandAutocompleteItems, rankCommandAutocompleteItems } from './commandAutocompleteItems';
 import { useGuestCommands } from '@/hooks/useGuestSurfaces';
 import { AutocompleteRowTooltip } from './composer/ui/AutocompleteRowTooltip';
+import { isSideChatAvailable } from '@/lib/sideChat';
+import { useChatSurfaceMode } from './useChatSurfaceMode';
 
 // Skills are not here: they have their own `$` picker.
 type CommandSource = 'openchamber' | 'opencode' | 'extension';
@@ -35,7 +37,7 @@ export interface CommandInfo {
 // Every name the composer runs itself; an extension command with one of
 // these names is dropped before it reaches the list.
 const LOCAL_COMMAND_NAMES = [
-  'init', 'review', 'undo', 'redo', 'timeline', 'compact', 'fork', 'btw', 'summary', 'workspace-review', 'handoff-review',
+  'init', 'review', 'undo', 'redo', 'timeline', 'compact', 'fork', 'sidechat', 'btw', 'summary', 'workspace-review', 'handoff-review',
   'plan-feature', 'craft-goal', 'schedule-task', 'catch-up', 'debug', 'weigh', 'explore',
 ];
 
@@ -75,12 +77,14 @@ export const CommandAutocomplete = React.forwardRef<CommandAutocompleteHandle, C
   style,
 }, ref) => {
   const { t } = useI18n();
+  const chatSurfaceMode = useChatSurfaceMode();
   const currentSessionId = useChatSessionSelection().sessionId;
   const hasSession = Boolean(currentSessionId);
   const hasNewSessionDraft = useSessionUIStore((state) => Boolean(state.newSessionDraft?.open));
   const canStartSessionCommand = hasSession || hasNewSessionDraft;
   const isMobile = useUIStore((state) => state.isMobile);
   const canUseReviewHandoffFlow = hasSession && !isMobile && !isVSCodeRuntime();
+  const canUseSideChat = hasSession && chatSurfaceMode === 'default' && isSideChatAvailable(isMobile);
 
   // Commands belong to the directory the composer sends to — the session's
   // own directory, or the Chats root for a chat draft — not to the project
@@ -165,6 +169,10 @@ export const CommandAutocomplete = React.forwardRef<CommandAutocompleteHandle, C
         ? [{ id: 'openchamber:fork', name: 'fork', source: 'openchamber' as const, description: t('chat.commandAutocomplete.command.forkDescription'), isOpenChamber: true }]
         : []
       ),
+      ...(canUseSideChat
+        ? [{ id: 'openchamber:sidechat', name: 'sidechat', source: 'openchamber' as const, description: t('chat.commandAutocomplete.command.sideChatDescription'), isOpenChamber: true }]
+        : []
+      ),
       ...(hasSession
         ? [{ id: 'openchamber:summary', name: 'summary', source: 'openchamber' as const, description: t('chat.commandAutocomplete.command.summaryDescription'), isOpenChamber: true }]
         : []
@@ -217,7 +225,7 @@ export const CommandAutocomplete = React.forwardRef<CommandAutocompleteHandle, C
       ...mergeCommandAutocompleteItems(builtInCommands, customCommands),
       ...extensionCommands,
     ];
-  }, [hasSession, canStartSessionCommand, canUseReviewHandoffFlow, commandsWithMetadata, guestCommands, t]);
+  }, [hasSession, canStartSessionCommand, canUseReviewHandoffFlow, canUseSideChat, commandsWithMetadata, guestCommands, t]);
   const commands = React.useMemo(
     () => rankCommandAutocompleteItems(allCommands, searchQuery),
     [allCommands, searchQuery],

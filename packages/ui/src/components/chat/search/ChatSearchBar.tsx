@@ -7,6 +7,8 @@ import { useI18n } from '@/lib/i18n';
 import { isSearchableQuery, searchMessages, type MessageSearchHit } from '@/lib/messageSearch';
 import { requestMessageFocus } from '@/lib/router/messageFocus';
 import { useUIStore } from '@/stores/useUIStore';
+import type { SideChatBoundary } from '@/lib/sessionSideChatMetadata';
+import { compareMessagesChronologically } from '@/sync/message-ordering';
 
 import { findTermRanges, paintSearchHighlights, toHighlightTerms } from './chatSearchHighlight';
 import { requestReasoningReveal } from './reasoningReveal';
@@ -25,18 +27,22 @@ type SearchState =
   | { status: 'error' }
   | { status: 'unavailable' };
 
-const loadAllHits = async (query: string, sessionId: string, includeReasoning: boolean, signal: AbortSignal): Promise<SearchState> => {
+const loadAllHits = async (query: string, sessionId: string, includeReasoning: boolean, signal: AbortSignal, boundary: SideChatBoundary | null): Promise<SearchState> => {
   const hits: MessageSearchHit[] = [];
   let before: string | null = null;
   for (let page = 0; page < MAX_PAGES; page += 1) {
-    const result = await searchMessages({ query, sessionId, includeReasoning, order: 'asc', limit: PAGE_SIZE, before, signal });
+    const result = await searchMessages({ query, sessionId, includeReasoning, order: boundary ? 'desc' : 'asc', limit: PAGE_SIZE, before, signal });
     if (result.status === 'unavailable') return { status: 'unavailable' };
     if (result.status === 'query-too-short') return { status: 'too-short' };
-    hits.push(...result.hits);
+    const visible = result.hits.filter((hit) => !boundary || compareMessagesChronologically({
+      id: hit.id, role: hit.role === 'user' ? 'user' : 'assistant', time: { created: hit.createdAt },
+    }, boundary) > 0);
+    hits.push(...visible);
+    if (boundary && visible.length < result.hits.length) break;
     if (!result.next) break;
     before = result.next;
   }
-  return { status: 'ready', hits };
+  return { status: 'ready', hits: boundary ? hits.reverse() : hits };
 };
 
 export const ChatSearchBar: React.FC<{
@@ -45,7 +51,8 @@ export const ChatSearchBar: React.FC<{
   /** Bumped by every Cmd+F: focus and select the query again. */
   focusRequest: number;
   onClose: () => void;
-}> = ({ sessionId, scrollNode, focusRequest, onClose }) => {
+  boundary?: SideChatBoundary | null;
+}> = ({ sessionId, scrollNode, focusRequest, onClose, boundary = null }) => {
   const { t } = useI18n();
   // Hidden reasoning is not searched: its hits would lead nowhere visible.
   const includeReasoning = useUIStore((state) => state.showReasoningTraces);
@@ -75,7 +82,7 @@ export const ChatSearchBar: React.FC<{
     }
     const controller = new AbortController();
     setState({ status: 'loading' });
-    loadAllHits(debouncedQuery, sessionId, includeReasoning, controller.signal)
+    loadAllHits(debouncedQuery, sessionId, includeReasoning, controller.signal, boundary)
       .then((next) => {
         if (controller.signal.aborted) return;
         setState(next);
@@ -86,7 +93,7 @@ export const ChatSearchBar: React.FC<{
         if (!controller.signal.aborted) setState({ status: 'error' });
       });
     return () => controller.abort();
-  }, [debouncedQuery, includeReasoning, sessionId]);
+  }, [debouncedQuery, includeReasoning, sessionId, boundary]);
 
   // Moving to a hit is a message link: shown where links land, loading older
   // history when the message is not in the loaded window. A hit in reasoning

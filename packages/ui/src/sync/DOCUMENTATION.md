@@ -523,6 +523,14 @@ Reconciliation walks the running turns and asks the snapshot whether it covers e
 
 Forks (`forked-session.ts`): OpenCode 2.x publishes only `session.forked` for a fork, with ids and no record, and no `session.created` follows. `handleEvent` reads the fork's record with `session.get` and replays it as a `session.created`, so other clients show the fork without a list reload. A session the global cache already holds (the forking client inserted it from the fork response) is skipped; a failed read or a runtime switch applies nothing.
 
+Local fork actions register the server-returned directory, publish the fork to
+that directory's child store with a session mutation revision, and upsert the
+global cache before opening it. `forkAfterMessage` and
+`forkFromLastCompletedTurn` accept a column opener; by default it selects the
+fork as the main session. `lib/sideChat.ts` supplies an opener that creates a
+writable context-panel chat tab without changing main selection. A fork
+response from a retired runtime publishes nothing and calls no opener.
+
 Child-session discovery (`child-session-discovery.ts`) adds only children the global sessions cache does not list as archived: the listing asks for active children, but a response that left the server before an archive completed still carries them without `time.archived`, and re-adding them would show the just-archived subagents as active orphans until the next refresh.
 
 The active-session watchdog in `sync-context.tsx` sends status recovery through the active-session priority of `runBackgroundNetworkTask`. Its child-session discovery pages use `runSessionListNetworkTask`, alongside global and bootstrap session pages. Both lanes live in `@/lib/background-network`. Git, skills, and directory initialization use the background lane. These limits reserve browser connections for interactive message requests rather than letting startup fan-out occupy the whole pool.
@@ -1163,6 +1171,21 @@ session: the column root names its session and whether it runs
 
 The composer's per-column state (model selection, attachments, pending text
 and context) is described in the composer documentation, *Pinned composer*.
+
+Side chats created through `/sidechat` or "Side chat from here" persist
+`openchamber.sideChatBoundary` on the fork before opening its panel. The marker
+records the last cloned message's identity, creation time and synthetic ordering
+rank, using the same chronology as the message store. OpenCode gives clones new
+IDs, so the source's fork boundary cannot identify the panel's last clone.
+`sessionSideChatMetadata.ts` owns marker parsing and display filtering. The
+pinned timeline, prompt navigation and search show only records after that
+marker; pagination stops when it reaches inherited context. A main-column view
+of the fork still shows its full history. Model context and stored messages are
+unchanged. Closing and reopening the panel keeps the marker. A subsequent fork
+drops the source's marker and captures its own if opened as a side chat.
+Failed boundary reads or metadata writes leave the created fork in the session
+list and do not open the panel or send its first question. Runtime changes reject
+late completions. Old sessions without a marker retain their full-history view.
 
 Select leaf values, not containers:
 

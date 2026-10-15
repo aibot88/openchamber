@@ -149,6 +149,7 @@ const LOCAL_ACTION_COMMANDS = new Set([
     'handoff-review',
     'compact',
     'fork',
+    'sidechat',
 ]);
 
 /**

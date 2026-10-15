@@ -2631,15 +2631,25 @@ export async function refetchSessionMessages(sessionId: string): Promise<void> {
   })
 }
 
-/** Insert the fork into the child store so the sidebar updates immediately, then switch to it. */
-function openForkedSession(store: DirectoryStoreApi, forkedSession: Session, directory: string | null | undefined) {
+type ForkSessionOpener = (session: Session, directory: string | null | undefined) => void
+
+const selectForkedSession: ForkSessionOpener = (session, directory) =>
+  useSessionUIStore.getState().setCurrentSession(session.id, directory)
+
+/** Publish the fork before opening it in the caller's chat column. */
+function openForkedSession(store: DirectoryStoreApi, forkedSession: Session, directory: string | null | undefined, openSession: ForkSessionOpener = selectForkedSession) {
+  if (directory) {
+    registerSessionDirectory(forkedSession.id, directory)
+    store = dirStoreForDirectory(directory)
+  }
   const sessions = [...store.getState().session]
   const searchResult = Binary.search(sessions, forkedSession.id, (s) => s.id)
   if (!searchResult.found) {
     sessions.splice(searchResult.index, 0, forkedSession)
-    store.setState({ session: sessions })
+    store.setState({ session: sessions, ...sessionMutationPatch(store.getState(), forkedSession.id, false) })
   }
-  useSessionUIStore.getState().setCurrentSession(forkedSession.id, directory)
+  useGlobalSessionsStore.getState().upsertSession(forkedSession)
+  openSession(forkedSession, directory)
 }
 
 /**
@@ -2680,7 +2690,7 @@ const isTurnBoundary = (message: Message): boolean =>
  * transcript is copied. The composer stays empty since there is no prompt to
  * rewrite.
  */
-export async function forkAfterMessage(sessionId: string, messageId: string): Promise<Session | null> {
+export async function forkAfterMessage(sessionId: string, messageId: string, openSession: ForkSessionOpener = selectForkedSession): Promise<Session | null> {
   const expectedRuntimeKey = getRuntimeKey()
   const { store, directory } = dirStoreForSession(sessionId)
   const messages = store.getState().message[sessionId] ?? []
@@ -2694,8 +2704,9 @@ export async function forkAfterMessage(sessionId: string, messageId: string): Pr
   })
   if (isStaleRuntime(expectedRuntimeKey)) return null
   const forkDirectory = resolveSessionOwnedDirectory(forkedSession) ?? directory
-  openForkedSession(store, forkedSession, forkDirectory)
+  openForkedSession(store, forkedSession, forkDirectory, openSession)
   await inheritForkMetadata(sessionId, forkedSession, forkDirectory, expectedRuntimeKey)
+  if (isStaleRuntime(expectedRuntimeKey)) return null
   return forkedSession
 }
 
@@ -2752,14 +2763,14 @@ export class NothingToForkError extends Error {
  * `/fork`: fork after the last finished turn and open the fork. A running turn
  * in the source session is left alone and not copied.
  */
-export async function forkFromLastCompletedTurn(sessionId: string): Promise<Session | null> {
+export async function forkFromLastCompletedTurn(sessionId: string, openSession: ForkSessionOpener = selectForkedSession): Promise<Session | null> {
   const { store } = dirStoreForSession(sessionId)
   const state = store.getState()
   const status = state.session_status?.[sessionId]
   const turnRunning = status !== undefined && status.type !== "idle"
   const messageId = findLastCompletedTurnMessageId(state.message[sessionId] ?? [], turnRunning)
   if (!messageId) throw new NothingToForkError()
-  return forkAfterMessage(sessionId, messageId)
+  return forkAfterMessage(sessionId, messageId, openSession)
 }
 
 /**

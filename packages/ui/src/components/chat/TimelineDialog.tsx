@@ -17,6 +17,7 @@ import { getCurrentIntlLocale, useI18n } from '@/lib/i18n';
 import { getFullText, getMessagePreview } from './lib/messagePreview';
 import { useDeviceInfo } from '@/lib/device';
 import { cn } from '@/lib/utils';
+import { filterSideChatMessages, type SideChatBoundary } from '@/lib/sessionSideChatMetadata';
 
 interface TimelineDialogProps {
     open: boolean;
@@ -27,6 +28,7 @@ interface TimelineDialogProps {
     canLoadEarlier?: boolean;
     isLoadingEarlier?: boolean;
     onLoadEarlier?: () => void;
+    boundary?: SideChatBoundary | null;
 }
 
 // Locale-keyed formatters: constructing an Intl formatter is far more
@@ -105,6 +107,7 @@ const TimelineDialogBody: React.FC<TimelineDialogBodyProps> = ({
     currentSessionDirectory,
     searchQuery,
     onSearchQueryChange,
+    boundary = null,
 }) => {
     const { t } = useI18n();
     const messages = useSessionMessageRecords(currentSessionId, currentSessionDirectory);
@@ -121,10 +124,10 @@ const TimelineDialogBody: React.FC<TimelineDialogBodyProps> = ({
 
     // Timeline actions are only valid for user messages.
     const userMessages = React.useMemo(() => {
-        return messages
+        return filterSideChatMessages(messages, boundary)
             .filter((message) => message.info.role === 'user')
             .map((message) => ({ message }));
-    }, [messages]);
+    }, [messages, boundary]);
 
     // Filter by search query using all text parts in each user message.
     const filteredMessages = React.useMemo(() => {

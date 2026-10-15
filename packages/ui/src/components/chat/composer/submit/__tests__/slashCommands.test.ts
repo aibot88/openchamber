@@ -64,6 +64,16 @@ describe('findMagicPromptCommand', () => {
 });
 
 describe('planLocalSlashCommand', () => {
+    test('/sidechat retains attached context and requires a session', () => {
+        expect(planLocalSlashCommand('/sidechat explain this', 'normal', true, true)).toEqual({
+            command: { name: 'sidechat', argument: 'explain this' },
+            kind: 'action',
+            attachedContext: 'retain',
+        });
+        expect(planLocalSlashCommand('/sidechat', 'normal', false, true)?.kind).toBe('action');
+        expect(planLocalSlashCommand('/sidechat', 'normal', false, false)).toBeNull();
+        expect(planLocalSlashCommand('/sidechat explain this', 'shell', false, true)).toBeNull();
+    });
     test('/fork is a session action that keeps its text as the argument', () => {
         expect(planLocalSlashCommand('/fork try the other approach', 'normal', true, true)).toEqual({
             command: { name: 'fork', argument: 'try the other approach' },
