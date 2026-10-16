@@ -814,6 +814,7 @@ export const dict: Record<I18nKey, string> = {
   'sessions.sidebar.group.pr.status.mergeConflicts': 'マージ競合',
   'sessions.sidebar.group.pr.status.mergeBlocked': 'マージブロック中',
   'sessions.sidebar.group.pr.status.checksFailing': 'チェック失敗',
+  'sessions.sidebar.group.pr.status.checksRunning': 'チェック実行中',
   'sessions.sidebar.group.issue.status.open': 'Issue公開中',
   'sessions.sidebar.group.issue.status.completed': '完了',
   'sessions.sidebar.group.issue.status.notPlanned': '対応予定なし',

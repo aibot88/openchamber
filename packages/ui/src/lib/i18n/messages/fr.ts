@@ -635,6 +635,7 @@ export const dict = {
   'sessions.sidebar.group.pr.status.mergeConflicts': 'Conflits de fusion',
   'sessions.sidebar.group.pr.status.mergeBlocked': 'Fusion bloquée',
   'sessions.sidebar.group.pr.status.checksFailing': 'Vérifications en échec',
+  'sessions.sidebar.group.pr.status.checksRunning': 'Vérifications en cours',
   'sessions.sidebar.group.issue.status.open': 'Issue ouverte',
   'sessions.sidebar.group.issue.status.completed': 'Terminée',
   'sessions.sidebar.group.issue.status.notPlanned': 'Non planifiée',

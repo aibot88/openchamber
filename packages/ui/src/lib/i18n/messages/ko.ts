@@ -814,6 +814,7 @@ export const dict: Record<I18nKey, string> = {
   'sessions.sidebar.group.pr.status.mergeConflicts': '병합 충돌',
   'sessions.sidebar.group.pr.status.mergeBlocked': '병합 차단됨',
   'sessions.sidebar.group.pr.status.checksFailing': '검사 실패',
+  'sessions.sidebar.group.pr.status.checksRunning': '검사 실행 중',
   'sessions.sidebar.group.issue.status.open': 'Issue 열림',
   'sessions.sidebar.group.issue.status.completed': '완료됨',
   'sessions.sidebar.group.issue.status.notPlanned': '계획 없음',

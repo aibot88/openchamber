@@ -814,6 +814,7 @@ export const dict: Record<I18nKey, string> = {
   'sessions.sidebar.group.pr.status.mergeConflicts': 'Konflikty scalania',
   'sessions.sidebar.group.pr.status.mergeBlocked': 'Scalanie zablokowane',
   'sessions.sidebar.group.pr.status.checksFailing': 'Sprawdzenia nie przeszły',
+  'sessions.sidebar.group.pr.status.checksRunning': 'Sprawdzenia w toku',
   'sessions.sidebar.group.issue.status.open': 'Zgłoszenie otwarte',
   'sessions.sidebar.group.issue.status.completed': 'Ukończone',
   'sessions.sidebar.group.issue.status.notPlanned': 'Nieplanowane',

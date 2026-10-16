@@ -787,6 +787,7 @@ export const dict = {
   'sessions.sidebar.group.pr.status.mergeConflicts': 'تعارضات دمج',
   'sessions.sidebar.group.pr.status.mergeBlocked': 'الدمج محظور',
   'sessions.sidebar.group.pr.status.checksFailing': 'فحوصات فاشلة',
+  'sessions.sidebar.group.pr.status.checksRunning': 'الفحوصات قيد التشغيل',
   'sessions.sidebar.group.issue.status.open': 'مشكلة مفتوحة',
   'sessions.sidebar.group.issue.status.completed': 'مكتملة',
   'sessions.sidebar.group.issue.status.notPlanned': 'غير مخطط لها',

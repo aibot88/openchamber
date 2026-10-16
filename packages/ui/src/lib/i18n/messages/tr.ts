@@ -723,6 +723,7 @@ export const dict = {
   'sessions.sidebar.group.pr.status.mergeConflicts': 'Merge çakışmaları',
   'sessions.sidebar.group.pr.status.mergeBlocked': 'Merge engellendi',
   'sessions.sidebar.group.pr.status.checksFailing': 'Check\'ler başarısız',
+  'sessions.sidebar.group.pr.status.checksRunning': 'Check\'ler çalışıyor',
   'sessions.sidebar.group.issue.status.open': 'Issue açık',
   'sessions.sidebar.group.issue.status.completed': 'Tamamlandı',
   'sessions.sidebar.group.issue.status.notPlanned': 'Planlanmadı',

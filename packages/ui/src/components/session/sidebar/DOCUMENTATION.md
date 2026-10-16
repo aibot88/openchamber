@@ -338,7 +338,11 @@ all / Expand all.
   never expand, show no chevron, no folders and no worktree groups. Folders are
   not projected, so the row menu hides `Move to folder`. Their archive/delete
   actions still cover the full subtree, because `collectSessionSubtreeIds`
-  resolves descendants from the global cache at action time.
+  resolves descendants from the global cache at action time. `Move to
+  worktree` and `Export Markdown` do the same through
+  `buildActiveSessionTreeFromCache`, which builds the active tree from the
+  global cache and stops at an archived session, as the project tree does. The
+  export offers its sub-agent tasks dialog from that tree.
 - `worktreeIndex.ts` is the shared exact worktree index (normalized keys,
   project-root exclusion, first-wins dedupe) for In work and the timeline, project
   grouping, and the session switcher. `recent/sessionLocation.ts` is the single

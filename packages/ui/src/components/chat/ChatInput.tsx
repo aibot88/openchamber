@@ -911,7 +911,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
         [],
     );
 
-    const resolveInlineFileMention = React.useCallback((mentionPath: string): { serverPath: string; filename: string } | null => {
+    const resolveInlineFileMention = React.useCallback((mentionPath: string): { serverPath: string; filename: string; root: string } | null => {
         const kind = classifyMention(mentionPath, {
             knownAgentNames: knownAgentNamesRef.current,
             confirmedMentions: confirmedMentionsRef.current,
@@ -934,6 +934,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
         return {
             serverPath: serverPath.replace(/\/+/g, '/'),
             filename: normalizedMentionPath.split('/').filter(Boolean).pop() || normalizedMentionPath,
+            root,
         };
     }, [chatSearchDirectory]);
 
@@ -1004,7 +1005,10 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
                     continue;
                 }
                 try {
-                    const response = await runtimeFetch('/api/fs/raw', { query: { path: mention.serverPath } });
+                    // The directory bounds the read, and sends it to the space that holds the file.
+                    const response = await runtimeFetch('/api/fs/raw', {
+                        query: { path: mention.serverPath, directory: mention.root || undefined },
+                    });
                     if (!response.ok) throw new Error(`Failed to read ${mention.filename}`);
                     const sourceBlob = await response.blob();
                     if (getRuntimeKey() !== runtimeKey) return { status: 'runtime-changed' };
@@ -1159,6 +1163,7 @@ const ChatInputComponent: React.FC<ChatInputProps> = ({
             text: initialDraftRef.current ?? '',
             identity: initialDraftIdentityRef.current,
         },
+        newSessionDraftId: newSessionDraftOpen ? newSessionDraft.draftId : null,
         onIdentityChange: () => {
             setInputMode('normal');
             draftCaretModeRef.current.atEnd = isBtwActive || draftCaretModeRef.current.btw;

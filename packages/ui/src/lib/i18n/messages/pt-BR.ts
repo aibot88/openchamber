@@ -815,6 +815,7 @@ export const dict: Record<I18nKey, string> = {
   "sessions.sidebar.group.pr.status.mergeConflicts": "Conflitos de merge",
   "sessions.sidebar.group.pr.status.mergeBlocked": "Merge bloqueado",
   "sessions.sidebar.group.pr.status.checksFailing": "Checks falhando",
+  "sessions.sidebar.group.pr.status.checksRunning": "Checks em execução",
   "sessions.sidebar.group.issue.status.open": "Issue aberta",
   "sessions.sidebar.group.issue.status.completed": "Concluída",
   "sessions.sidebar.group.issue.status.notPlanned": "Não planejada",

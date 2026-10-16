@@ -719,6 +719,7 @@ export const dict = {
   'sessions.sidebar.group.pr.status.mergeConflicts': 'Zusammenführungskonflikte',
   'sessions.sidebar.group.pr.status.mergeBlocked': 'Zusammenführung blockiert',
   'sessions.sidebar.group.pr.status.checksFailing': 'Checks fehlgeschlagen',
+  'sessions.sidebar.group.pr.status.checksRunning': 'Checks laufen',
   'sessions.sidebar.group.issue.status.open': 'Issue offen',
   'sessions.sidebar.group.issue.status.completed': 'Erledigt',
   'sessions.sidebar.group.issue.status.notPlanned': 'Nicht geplant',

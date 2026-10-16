@@ -813,6 +813,7 @@ export const dict = {
   'sessions.sidebar.group.pr.status.mergeConflicts': 'Merge conflicts',
   'sessions.sidebar.group.pr.status.mergeBlocked': 'Merge blocked',
   'sessions.sidebar.group.pr.status.checksFailing': 'Checks failing',
+  'sessions.sidebar.group.pr.status.checksRunning': 'Checks running',
   'sessions.sidebar.group.issue.status.open': 'Issue open',
   'sessions.sidebar.group.issue.status.completed': 'Completed',
   'sessions.sidebar.group.issue.status.notPlanned': 'Not planned',

@@ -555,6 +555,17 @@ and the send path reading the same grammar.
   draft. Two orderings are load-bearing: the debounced write is skipped once
   while a draft is being restored, and a deleted draft's empty signature is
   recorded before a queued write could resurrect it.
+  When the open new-session draft changes its project or worktree, its
+  identity changes while `newSessionDraft.draftId` stays the same
+  (`ChatInput` passes the id). A session moved to another directory (the
+  sidebar's move actions, an agent's `session_move`) keeps its session id
+  while its directory changes. Either switch moves the draft: its attached
+  files and non-empty text go to the new directory, the old directory's text
+  is cleared, and confirmed mentions are dropped because they name the old
+  directory's files. A draft already saved for the new directory stays above
+  the moved text, and the moved text is not selected as a restored draft.
+  Opening another new-session draft gets a new id, so a feature that opens
+  one elsewhere with its own prompt leaves the typed draft where it was.
   Fork replay text and files arrive in `input-store.pendingComposerRestore`,
   addressed to the fork's runtime, directory, and session. The hook consumes
   them after loading that identity's draft. Selection alone is not enough:
