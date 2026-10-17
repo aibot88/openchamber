@@ -482,7 +482,7 @@ export const ProviderOAuthMethods: React.FC<ProviderOAuthMethodsProps> = ({
             {isActive && flow.phase === 'waitingCommand' && (
               <div className="flex items-center justify-between gap-2">
                 <p className="typography-meta text-muted-foreground flex items-center gap-2" role="status">
-                  <Icon name="loader" className="h-3.5 w-3.5 animate-spin" />
+                  <Spinner className="h-3.5 w-3.5" />
                   {t('settings.providers.page.auth.command.waiting')}
                 </p>
                 <Button variant="ghost" size="xs" className="!font-normal shrink-0" onClick={cancel}>
