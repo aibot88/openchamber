@@ -506,29 +506,29 @@ describe('OpenRouter quota provider (VS Code parity)', () => {
     assert.ok(typeof result.usage!.windows.monthly!.resetAt === 'number');
   });
 
-  test('maps a lifetime cap to a credits window without reset metadata', async () => {
+  test('maps a lifetime cap to a key_limit window without reset metadata', async () => {
     stubFetchReturning(() => Promise.resolve(mockResponse({
       data: { limit: 30, limit_remaining: 25, limit_reset: null, usage_monthly: 5 },
     })));
 
     const result = await fetchQuotaForProvider('openrouter');
-    const window = result.usage!.windows.credits;
+    const window = result.usage!.windows.key_limit;
 
     assert.ok(window);
     assert.equal(window!.windowSeconds, null);
     assert.equal(window!.resetAt, null);
   });
 
-  test('maps an unrecognized reset period to a credits window', async () => {
+  test('maps an unrecognized reset period to a key_limit window', async () => {
     stubFetchReturning(() => Promise.resolve(mockResponse({
       data: { limit: 30, limit_remaining: 25, limit_reset: 'yearly', usage_monthly: 5 },
     })));
 
     const result = await fetchQuotaForProvider('openrouter');
 
-    assert.ok(result.usage!.windows.credits);
-    assert.equal(result.usage!.windows.credits!.windowSeconds, null);
-    assert.equal(result.usage!.windows.credits!.resetAt, null);
+    assert.ok(result.usage!.windows.key_limit);
+    assert.equal(result.usage!.windows.key_limit!.windowSeconds, null);
+    assert.equal(result.usage!.windows.key_limit!.resetAt, null);
   });
 
   test('clamps percent at 100 while leaving the money label unclamped', async () => {

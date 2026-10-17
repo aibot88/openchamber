@@ -26,7 +26,6 @@ import { useInlineCommentDraftStore, type InlineCommentDraftTarget } from "@/sto
 import { materializeSessionSnapshots } from "./materialization"
 import { sessionEvents } from "@/lib/sessionEvents"
 import { fileTreeChanges } from "@/lib/fileTreeChanges"
-import { SESSION_KNOWLEDGE_HEADER, forgetSessionKnowledgeDelivered } from "@/lib/sessionKnowledgeApi"
 import {
   getOriginalSessionID,
   getSessionMetadata,
@@ -1962,12 +1961,11 @@ export async function optimisticSend(input: {
   /** Context admitted ahead of the prompt; shown in the optimistic message until the server echoes it. */
   context?: SyntheticContextInput[]
   /**
-   * Context still being fetched, admitted ahead of `context` once it resolves
-   * (the session's project knowledge). The user message is inserted without
-   * waiting for it; only the request waits. Must not reject: it resolves to
-   * null when there is nothing to add.
+   * Work the request waits for (the session's project knowledge being written
+   * into it). The user message is inserted without waiting for it. Must not
+   * reject.
    */
-  leadingContext?: Promise<SyntheticContextInput | null>
+  ready?: Promise<void>
   appendSubmissions?: () => void
   onOptimisticInsert?: () => void
   onMessageID?: (messageID: string) => void
@@ -2034,9 +2032,6 @@ export async function optimisticSend(input: {
 
   // Context ids come first so they sort before the prompt the way the server
   // admits them. The client skips blank items, so they get no record here.
-  // The leading item's id is reserved now, before it is known, so it still
-  // sorts ahead of everything else when it arrives after the insert.
-  const leadingContextID = input.leadingContext ? ascendingId("msg") : null
   const context = (input.context ?? [])
     .filter((item) => item.text.trim())
     .map((item) => ({ ...item, id: ascendingId("msg") }))
@@ -2110,18 +2105,9 @@ export async function optimisticSend(input: {
   })
 
   try {
-    let sentContext = context
-    if (input.leadingContext && leadingContextID) {
-      const leading = await input.leadingContext
-      if (leading?.text.trim()) {
-        const leadingItem = { ...leading, id: leadingContextID }
-        addSyntheticContext(leadingItem)
-        optimisticIDs.unshift(leadingContextID)
-        sentContext = [leadingItem, ...context]
-      }
-    }
+    await input.ready
     assertRuntimeUnchanged()
-    await input.send(messageID, sentContext)
+    await input.send(messageID, context)
   } catch (error) {
     const status = getErrorStatus(error)
     const ambiguousFailure = isAmbiguousSendFailure(error)
@@ -2613,13 +2599,6 @@ export async function revertToMessage(sessionId: string, messageId: string): Pro
     // Stage only: the messages disappear behind the revert marker while the
     // dock offers Commit (finalize) or Clear (bring them back).
     await opencodeClient.stageRevert(sessionId, revertMessageID, { directory })
-    // The cut takes the synthetic messages before the prompt along, the
-    // project knowledge block among them. Unless the server forgets it was
-    // delivered, the resend goes out without it (#4877).
-    const hidesKnowledge = messagesFrom(messages, revertMessageID).some((message) => (
-      message.role === "synthetic" && message.text.startsWith(SESSION_KNOWLEDGE_HEADER)
-    ))
-    if (hidesKnowledge) await forgetSessionKnowledgeDelivered(directory, sessionId)
     const revertedSession = await opencodeClient.getSession(sessionId, directory)
     const current = store.getState()
     const updated = [...current.session]

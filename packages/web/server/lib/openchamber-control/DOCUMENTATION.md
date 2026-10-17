@@ -57,6 +57,10 @@ other.
   (`trackWaitingPage` in `../opencode/session-runtime.js`), broadcasts
   `openchamber:page-waiting` / `openchamber:page-settled` to the clients, and
   sends the same "Input needed" notification a form gets.
+  `renderPageImageSources` lists the local images a page names by absolute
+  path (in quotes or a CSS `url()`, PNG, JPEG, GIF or WebP, at most 12). The
+  image grant route (`../markdown-image-grants/`) allows exactly those, and the
+  chat reads them with the same rule.
 - `routes.js` is the authenticated CLI HTTP adapter. It forwards one action,
   preserves service status and partial-result details, and propagates request
   cancellation. It also carries the chat's answer to a waiting page.
@@ -117,8 +121,9 @@ other.
   is required, `branch` and `startRef` are optional, and `existingBranch`
   checks out a branch that already exists in place of both. The worktree is made by
   the same `createWorktree` pipeline as `session.create`, waits for the same
-  bootstrap, then the checkout's uncommitted changes travel in one git stash
-  applied by hash, and the session is moved last through OpenCode's
+  bootstrap, then the uncommitted changes of the files named in `carry`
+  travel in one git stash applied by hash (nothing moves without it), and the
+  session is moved last through OpenCode's
   `session.move`. A failure after the worktree exists removes it again and
   puts the changes back; when restoring fails too, the error names the stash
   so nothing is lost. A 409 means the changes did not apply on the start ref.

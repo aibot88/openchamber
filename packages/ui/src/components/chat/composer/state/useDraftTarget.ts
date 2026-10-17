@@ -27,7 +27,7 @@ import { normalizePath } from '../attachments/filePaths';
 import { CHAT_DRAFT_PROJECT_ID } from '@/lib/chatDirectories';
 import { useI18n } from '@/lib/i18n';
 import { getGitStatus } from '@/lib/gitApi';
-import { isSpaceCreationRequest, spaceOfCreationRequest } from '@/lib/spaces/space-creation';
+import { isSpaceCreationRequest, spaceOfCreationRequest } from '@/lib/spaces/space-creation-requests';
 import { useSpacesStore } from '@/lib/spaces/spaces-store';
 
 /** How long a cached branch list is served before it is refreshed. */

@@ -212,7 +212,7 @@ import {
 } from './composer/ui/DraftTargetSelectors';
 import { NewSpaceDialog } from '@/components/session/spaces/NewSpaceDialog';
 import { NewWorktreeDialog } from '@/components/session/NewWorktreeDialog';
-import { isSpaceCreationRequest } from '@/lib/spaces/space-creation';
+import { isSpaceCreationRequest } from '@/lib/spaces/space-creation-requests';
 import { spaceModelRefusal, stoppedSpaceOfTarget } from '@/lib/spaces/space-model-access';
 import { runSpaceAction } from '@/lib/spaces/space-repair';
 import { useSpacesStore } from '@/lib/spaces/spaces-store';

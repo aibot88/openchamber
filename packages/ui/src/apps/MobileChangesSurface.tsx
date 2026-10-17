@@ -11,6 +11,9 @@ import { dropdownTriggerVariants } from '@/components/ui/dropdown-trigger';
 import { ScrollShadow } from '@/components/ui/ScrollShadow';
 import { ChangesPanel, type ChangesGroupConfig } from '@/components/views/git/ChangesPanel';
 import { BranchSelector } from '@/components/views/git/BranchSelector';
+import { ChangedPathLabel } from '@/components/views/git/ChangedPathLabel';
+import type { WalkthroughTarget } from '@/lib/walkthrough/types';
+import { MobileWalkthroughScreen } from './MobileWalkthroughScreen';
 import { BranchComparisonSelector } from '@/components/views/git/BranchComparisonSelector';
 import { CommitComparisonSelector } from '@/components/views/git/CommitComparisonSelector';
 import { branchRefLabel } from '@/components/views/git/baseBranch';
@@ -40,6 +43,9 @@ import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { useRepositoryBinding } from '@/lib/source-control/repository-binding';
 import { hasConfigChangedGrant } from '@/lib/source-control/types';
 import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
+import { useDraftSpaceTarget } from '@/lib/spaces/useDraftSpaceTarget';
+import { panelContentDirectory } from '@/lib/spaces/space-creation-requests';
+import { SpacePreparing } from '@/components/session/spaces/SpacePreparing';
 import { useNestedGitDirectory } from '@/hooks/useNestedGitDirectory';
 import { useBranchComparisonBase } from '@/hooks/useBranchComparisonBase';
 import { useCommitComparison } from '@/hooks/useCommitComparison';
@@ -92,7 +98,8 @@ type ChangesMode = 'working' | 'branch' | 'commit' | 'pr';
 type ChangesRoute =
   | { type: 'list' }
   | { type: 'diff'; path: string; staged: boolean }
-  | { type: 'comparison'; path: string; sourceKey: string };
+  | { type: 'comparison'; path: string; sourceKey: string }
+  | { type: 'walkthrough' };
 interface ChangesNavigation {
   ownerKey: string;
   mode: ChangesMode;
@@ -145,8 +152,11 @@ type MobileChangesSurfaceProps = {
 };
 
 export const MobileChangesSurface: React.FC<MobileChangesSurfaceProps> = (props) => {
-  const rootDirectory = normalizePath(useEffectiveDirectory() ?? null) ?? '';
+  // A draft waiting for a new space shows the space's changes, and none of this computer's until it runs.
+  const draftSpace = useDraftSpaceTarget();
+  const rootDirectory = normalizePath(panelContentDirectory(draftSpace, useEffectiveDirectory())) ?? '';
   const repository = useNestedGitDirectory(rootDirectory || null, { enabled: props.visible ?? true, recheckOnOpen: true });
+  if (draftSpace?.kind === 'preparing') return <SpacePreparing />;
   return <MobileChangesPane {...props} rootDirectory={rootDirectory} repository={repository} />;
 };
 
@@ -437,6 +447,16 @@ export const MobileChangesPane: React.FC<MobileChangesPaneProps> = ({ rootDirect
     }
     return Array.from(unique.values()).sort((a, b) => a.path.localeCompare(b.path));
   }, [status?.files]);
+
+  // What the walkthrough reads: the same subject as the list on screen. The
+  // working tree is walked through whole, as the desktop's default scope; a
+  // pull request needs the account and repository that read it.
+  const walkthroughTarget = React.useMemo<WalkthroughTarget | null>(() => {
+    if (mode === 'working') return changeEntries.length > 0 ? { source: { kind: 'working-tree', scope: 'all' } } : null;
+    if (!comparisonSource || !comparisonFiles?.length) return null;
+    if (comparisonSource.kind === 'pr') return prComparison.readContext ? { source: comparisonSource, context: prComparison.readContext } : null;
+    return { source: comparisonSource };
+  }, [changeEntries.length, comparisonFiles, comparisonSource, mode, prComparison.readContext]);
 
   const stagedChangeEntries = React.useMemo(
     () => changeEntries.filter(isStagedStatusFile),
@@ -1027,6 +1047,18 @@ export const MobileChangesPane: React.FC<MobileChangesPaneProps> = ({ rootDirect
   const sourceLabel = mode === 'branch' && branchComparison.base
     ? branchRefLabel(branchComparison.base)
     : mode === 'commit' ? selectedCommitHash?.slice(0, 8) : mode === 'pr' && selectedPr ? `#${selectedPr.number}` : null;
+  if (route.type === 'walkthrough' && walkthroughTarget && currentDirectory) {
+    return (
+      <MobileWalkthroughScreen
+        directory={currentDirectory}
+        target={walkthroughTarget}
+        subtitle={[modeLabel, sourceLabel].filter(Boolean).join(' · ')}
+        revision={JSON.stringify([comparisonRevision, mode === 'pr' ? comparison.revision : 0])}
+        visible={visible}
+        onBack={() => setRoute(LIST_ROUTE)}
+      />
+    );
+  }
   if (activeComparisonPath && activeComparisonDiff) {
     return (
       <MobileDiffDetail
@@ -1138,12 +1170,25 @@ export const MobileChangesPane: React.FC<MobileChangesPaneProps> = ({ rootDirect
           {selectedPr && <Button variant="ghost" size="sm" disabled={comparison.loading} aria-label={t('session.githubIssuePicker.actions.refresh')}
             onClick={() => void comparison.refresh()}><Icon name="refresh" className="size-4" /></Button>}
         </>}
+        {walkthroughTarget && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ms-auto shrink-0"
+            onClick={() => setRoute({ type: 'walkthrough' })}
+            aria-label={t('walkthrough.action.open')}
+            title={t('walkthrough.action.open')}
+            style={{ touchAction: 'manipulation' }}
+          >
+            <Icon name="route" className="size-5" />
+          </Button>
+        )}
         {/* The desktop diff toolbar's review, for the working tree: it reviews
             what the current session changed. */}
         {mode === 'working' && currentSessionId && (status?.files?.length ?? 0) > 0 ? (
           <Button
             variant="default"
-            className="ms-auto shrink-0"
+            className={cn('shrink-0', !walkthroughTarget && 'ms-auto')}
             disabled={reviewFlow.submitting}
             onClick={() => setReviewDialogOpen(true)}
             aria-label={t('diffView.actions.reviewAria')}
@@ -1372,7 +1417,7 @@ const MobileDiffDetail: React.FC<{
           <Icon name="arrow-left" className="size-5" />
         </button>
         <div className="min-w-0 flex-1 px-2">
-          <h2 className="truncate typography-ui-header text-foreground">{path}</h2>
+          <h2 className="typography-ui-header"><ChangedPathLabel path={path} /></h2>
           {subtitle && <p className="truncate typography-meta text-muted-foreground">{subtitle}</p>}
         </div>
         <button
@@ -1455,7 +1500,7 @@ const MobileComparisonFileList: React.FC<{ files: GitComparisonFile[]; onSelect:
             <Button variant="ghost" size="lg" className="w-full justify-start gap-2.5 text-start normal-case" onClick={() => onSelect(file.path)}>
               <span className="w-4 shrink-0 text-center typography-meta font-semibold uppercase" style={{ color: statusColor }} aria-label={statusLabel}>{file.status}</span>
               <FileTypeIcon filePath={file.path} className="size-4 shrink-0" />
-              <span className="min-w-0 flex-1 truncate typography-ui-label" title={file.path}>{file.path}</span>
+              <ChangedPathLabel path={file.path} className="flex-1 typography-ui-label" />
               {(file.insertions > 0 || file.deletions > 0) && <span className="shrink-0 typography-meta text-muted-foreground">+{file.insertions} -{file.deletions}</span>}
               <Icon name="arrow-right-s" className="size-4 shrink-0 text-muted-foreground" />
             </Button>

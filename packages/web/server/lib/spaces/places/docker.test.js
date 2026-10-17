@@ -243,6 +243,7 @@ describe('docker place: create', () => {
       '--env', 'OPENCODE_DISABLE_AUTOUPDATE=1',
       '--env', 'OPENCHAMBER_RELAY_HOST=off',
       '--env', 'OPENCHAMBER_SPACE_IDLE_STOP_FILE=/home/space/.openchamber-space/idle-stop.json',
+      '--env', 'OPENCHAMBER_SPACE_PERMISSION_DEFAULT_FILE=/home/space/.openchamber-space/permission-default.json',
       SPACE_BASE_IMAGE,
       '/bin/sh', '-c',
       'while [ ! -s /home/space/.openchamber-space/token ]; do /bin/sleep 0.2; done; OPENCHAMBER_UI_PASSWORD="$(/bin/cat /home/space/.openchamber-space/token)"; export OPENCHAMBER_UI_PASSWORD; exec openchamber serve --foreground --api-only --host 127.0.0.1 --port 27600',

@@ -9,6 +9,7 @@ import { createSettingsRuntime } from './settings-runtime.js';
 const createRuntime = async ({
   mergePersistedSettings = (_current, changes) => changes,
   onManagedPluginSettingsChanged = undefined,
+  onPermissionDefaultModeChanged = undefined,
   chatRoots = undefined,
 } = {}) => {
   const tempRoot = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'oc-settings-runtime-'));
@@ -32,6 +33,7 @@ const createRuntime = async ({
     upsertManagedRemoteTunnelToken: async () => {},
     chatRoots,
     onManagedPluginSettingsChanged,
+    onPermissionDefaultModeChanged,
   });
 
   return {
@@ -54,6 +56,27 @@ describe('settings runtime', () => {
 
       await runtime.persistSettings({ agentWebToolEnabled: false });
       expect(onManagedPluginSettingsChanged).toHaveBeenCalledTimes(1);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('tells the running spaces the default permission mode only when it changed, once it is written', async () => {
+    const seen = [];
+    let settingsFilePath = '';
+    const { runtime, cleanup, settingsFilePath: filePath } = await createRuntime({
+      onPermissionDefaultModeChanged: async (mode) => {
+        seen.push([mode, JSON.parse(await fsPromises.readFile(settingsFilePath, 'utf8')).permissionDefaultMode]);
+      },
+    });
+    settingsFilePath = filePath;
+    try {
+      await runtime.persistSettings({ lightThemeId: 'flexoki-light' });
+      await runtime.persistSettings({ permissionDefaultMode: 'auto' });
+      await runtime.persistSettings({ permissionDefaultMode: 'auto' });
+      await vi.waitFor(() => expect(seen).toEqual([['auto', 'auto']]));
+      await runtime.persistSettings({ permissionDefaultMode: 'ask' });
+      await vi.waitFor(() => expect(seen).toEqual([['auto', 'auto'], ['ask', 'ask']]));
     } finally {
       await cleanup();
     }

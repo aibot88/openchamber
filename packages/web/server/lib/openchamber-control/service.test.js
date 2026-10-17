@@ -259,6 +259,19 @@ describe('OpenChamber control service', () => {
     });
   });
 
+  it('passes the files to carry through to the move', async () => {
+    const moveToWorktree = vi.fn(async () => ({}));
+    const { service } = createService({ sessionService: { moveToWorktree } });
+
+    await service.execute('session.moveToWorktree', { worktree: 'fix', carry: ['src/a.ts'] }, '/repo', { contextSessionId: 'ses_me' });
+
+    expect(moveToWorktree).toHaveBeenCalledWith('ses_me', {
+      directory: '/repo',
+      worktree: { name: 'fix' },
+      carry: ['src/a.ts'],
+    });
+  });
+
   it('moves a named session from where that session lives', async () => {
     const moveToWorktree = vi.fn(async () => ({}));
     const { service, client } = createService({ sessionService: { moveToWorktree } });

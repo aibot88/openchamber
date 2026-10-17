@@ -63,6 +63,8 @@ const journeyWith = ({ readHostLogin = null, hostProviders = undefined, failAt =
   // `calls` so the order of the other steps reads as it did before 5d-3.
   const idle = { saved: null, writes: [], release: () => {} };
   const idleSaveHeld = new Promise((resolve) => { idle.release = resolve; });
+  // The permission mode a new chat starts in, as the host's settings hold it, and each one said to a server inside.
+  const defaultMode = { saved: 'auto', writes: [] };
   // With `holdReady`, the server inside reports ready only when the test lets it, so the login
   // row's repair after a start waits where a real server inside would still be starting.
   let releaseReady = () => {};
@@ -70,6 +72,7 @@ const journeyWith = ({ readHostLogin = null, hostProviders = undefined, failAt =
   const serverInside = {
     writeToken: async (spaceId, token) => { calls.push(['writeToken', spaceId, token]); fail('writeToken'); },
     writeIdleStop: async (spaceId, setting) => { fail('writeIdleStop'); idle.writes.push([spaceId, setting]); },
+    writePermissionDefault: async (spaceId, setting) => { fail('writePermissionDefault'); defaultMode.writes.push([spaceId, setting]); },
     waitUntilReady: async (spaceId) => { fail('waitUntilReady'); if (holdReady) await readyHeld; calls.push(['waitUntilReady', spaceId]); },
   };
   const restartOpenCodeInside = async (spaceId) => { calls.push(['restartOpenCodeInside', spaceId]); fail('restartOpenCodeInside'); };
@@ -124,12 +127,13 @@ const journeyWith = ({ readHostLogin = null, hostProviders = undefined, failAt =
     resolveDirectory,
     readIdleStop: async () => idle.saved ?? { enabled: true, hours: 4 },
     saveIdleStop: async (setting) => { if (holdIdleSave) await idleSaveHeld; fail('saveIdleStop'); idle.saved = setting; },
+    readPermissionDefault: async () => ({ mode: defaultMode.saved }),
     announce: (spaceId, payload) => { events.push({ spaceId, ...payload.properties }); },
     onSpacesChanged: () => { changes.count += 1; },
     logger,
     now: () => new Date(clock.time),
   });
-  return { journey, place, records, calls, events, changes, manager, releaseCodeIn, releaseCodeOut, releaseReady, releaseLoginRow, gatekeeper, dataDir, idle, clock };
+  return { journey, place, records, calls, events, changes, manager, releaseCodeIn, releaseCodeOut, releaseReady, releaseLoginRow, gatekeeper, dataDir, idle, defaultMode, clock };
 };
 
 const REQUEST = { projectDirectory: PROJECT, name: ' Fix login ', start: 'uncommitted', network: NETWORK };
@@ -1418,6 +1422,60 @@ describe('the journey: the project folder of a space', () => {
     const { journey } = journeyWith({ holdCodeIn: true });
     const { id } = await journey.createSpace(REQUEST);
     expect((await journey.listSpaces()).find((space) => space.id === id)).toMatchObject({ projectFolder: { path: PROJECT, found: null } });
+  });
+});
+
+describe('the journey: the default permission mode', () => {
+  const ready = async (options) => {
+    const made = journeyWith(options);
+    const { id } = await made.journey.createSpace(REQUEST);
+    await until(() => steps(made.events, id).includes('ready'));
+    return { ...made, id };
+  };
+
+  it('tells the server inside the mode when the space is made and at every start and restart', async () => {
+    const { journey, id, defaultMode } = await ready();
+    expect(defaultMode.writes).toEqual([[id, { mode: 'auto' }]]);
+    defaultMode.saved = 'safety';
+    await journey.stopSpace(id);
+    await journey.startSpace(id);
+    await journey.restartSpace(id);
+    expect(defaultMode.writes.slice(1)).toEqual([[id, { mode: 'safety' }], [id, { mode: 'safety' }]]);
+  });
+
+  it('tells every running space a changed mode, and only the running ones', async () => {
+    const { journey, id, defaultMode } = await ready();
+    const { id: other } = await journey.createSpace(REQUEST);
+    await until(() => defaultMode.writes.some(([spaceId]) => spaceId === other));
+    await journey.stopSpace(other);
+    defaultMode.writes.splice(0);
+
+    await journey.changePermissionDefault('ask');
+    expect(defaultMode.writes).toEqual([[id, { mode: 'ask' }]]);
+  });
+
+  it('says ask for a value that is no mode, so a damaged setting never answers for the user', async () => {
+    const { journey, id, defaultMode } = await ready();
+    defaultMode.writes.splice(0);
+    for (const value of [undefined, null, 'yes', true]) await journey.changePermissionDefault(value);
+    expect(defaultMode.writes).toEqual([undefined, null, 'yes', true].map(() => [id, { mode: 'ask' }]));
+  });
+
+  it('applies changes one after the other, so a space ends with the last one', async () => {
+    const { journey, id, defaultMode } = await ready();
+    defaultMode.writes.splice(0);
+    await Promise.all(['safety', 'ask', 'auto'].map((mode) => journey.changePermissionDefault(mode)));
+    expect(defaultMode.writes).toEqual(['safety', 'ask', 'auto'].map((mode) => [id, { mode }]));
+  });
+
+  it('makes and starts a space whose mode could not be written; its chats then start in ask', async () => {
+    const { journey, id, defaultMode, idle } = await ready({ failAt: 'writePermissionDefault' });
+    expect((await journey.listSpaces())[0]).toMatchObject({ id, state: 'running' });
+    await journey.stopSpace(id);
+    expect(await journey.startSpace(id)).toMatchObject({ id, state: 'running' });
+    await expect(journey.changePermissionDefault('auto')).resolves.toBeUndefined();
+    expect(defaultMode.writes).toEqual([]);
+    expect(idle.writes.map(([spaceId]) => spaceId)).toEqual([id, id]);
   });
 });
 

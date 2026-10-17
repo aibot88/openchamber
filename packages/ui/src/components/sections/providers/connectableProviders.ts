@@ -1,5 +1,6 @@
 import type { I18nKey } from '@/lib/i18n';
 import type { IntegrationCatalog } from '@/lib/opencode/integration-catalog';
+import { isWebSearchIntegration } from '@/lib/opencode/websearch';
 
 export interface ConnectableProvider {
   id: string;
@@ -34,9 +35,11 @@ const POPULAR_IDS = new Set(POPULAR_PROVIDERS.map((provider) => provider.id));
  * What can still be connected. v2's provider list holds only what is
  * configured or connected right now, so the candidates are the integrations,
  * minus those with any connection, MCP OAuth registrations (`mcp_*`), web
- * search providers (their keys live in Settings → Web search) and providers
- * OpenCode already lists. Sorted by name. A chosen provider stays until its
- * sign-in flow finishes: the registry can update before command/OAuth status.
+ * search providers (their keys live in Settings → Web search; a plugin's are
+ * marked on the integration, since OpenCode lists them for search only once
+ * connected) and providers OpenCode already lists. Sorted by name. A chosen
+ * provider stays until its sign-in flow finishes: the registry can update
+ * before command/OAuth status.
  */
 export const listConnectableProviders = (
   catalog: IntegrationCatalog,
@@ -45,6 +48,7 @@ export const listConnectableProviders = (
 ): ConnectableProvider[] => catalog.integrations
   .filter((integration) => !integration.id.startsWith('mcp_')
     && !catalog.webSearchIds?.has(integration.id)
+    && !isWebSearchIntegration(integration)
     && (integration.id === chosenProviderId
       || (integration.connections.length === 0 && !listedProviderIds.has(integration.id))))
   .map((integration) => ({ id: integration.id, name: integration.name || integration.id }))
