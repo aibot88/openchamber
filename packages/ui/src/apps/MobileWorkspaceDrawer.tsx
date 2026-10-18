@@ -1,5 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { arrayMove } from '@dnd-kit/sortable';
 import { isIMECompositionEvent } from '@/lib/ime';
 
 import { Icon } from '@/components/icon/Icon';
@@ -10,11 +11,13 @@ import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { SortableTabsStrip, type SortableTabsStripItem } from '@/components/ui/sortable-tabs-strip';
 import { TerminalView } from '@/components/views/TerminalView';
 import { useI18n } from '@/lib/i18n';
+import { orderMobileWorkspaceTabs, stripMobileWorkspaceTabs, type MobileWorkspaceTab } from '@/lib/mobileWorkspaceTabs';
 import type { ProjectRef } from '@/lib/projectContextApi';
 import { cn } from '@/lib/utils';
 import { useDirectoryStore } from '@/stores/useDirectoryStore';
 import { useMcpConfigStore } from '@/stores/useMcpConfigStore';
 import { useMcpStore } from '@/stores/useMcpStore';
+import { useUIStore } from '@/stores/useUIStore';
 
 import { MobileChangesSurface } from './MobileChangesSurface';
 import { MobileFilesSurface } from './MobileFilesSurface';
@@ -27,8 +30,6 @@ const ENTER_DELAY_MS = 16;
 // sides feel like the same piece of chrome.
 const ENTER_DURATION_MS = 320;
 const DRAWER_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
-
-export type MobileWorkspaceTab = 'changes' | 'files' | 'terminal' | 'notes' | 'mcp';
 
 /** Quick MCP enable/disable toggles as a workspace pane, with its own slim
     action row (add server → settings, refresh) replacing the old fullscreen
@@ -125,6 +126,9 @@ export const MobileWorkspaceDrawer: React.FC<{
   React.useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
+  const tabOrder = useUIStore((state) => state.mobileWorkspaceTabOrder);
+  const hiddenTabs = useUIStore((state) => state.mobileWorkspaceHiddenTabs);
+  const setTabOrder = useUIStore((state) => state.setMobileWorkspaceTabOrder);
   const tabRef = React.useRef(tab);
   React.useEffect(() => {
     tabRef.current = tab;
@@ -198,13 +202,26 @@ export const MobileWorkspaceDrawer: React.FC<{
 
   if (variant === 'drawer' && !rootRef.current) return null;
 
-  const tabItems: SortableTabsStripItem[] = [
-    { id: 'changes', label: t('mobile.menu.git'), icon: <Icon name="git-branch" className="h-3.5 w-3.5" /> },
-    { id: 'files', label: t('mobile.menu.files'), icon: <Icon name="file-text" className="h-3.5 w-3.5" /> },
-    { id: 'terminal', label: t('mobile.menu.terminal'), icon: <Icon name="terminal" className="h-3.5 w-3.5" /> },
-    { id: 'notes', label: t('contextRail.surface.notes'), icon: <Icon name="sticky-note" className="h-3.5 w-3.5" /> },
-    { id: 'mcp', label: t('mobile.menu.mcp'), icon: <McpIcon className="h-3.5 w-3.5" /> },
-  ];
+  const tabDefinitions = {
+    changes: { id: 'changes', label: t('mobile.menu.git'), icon: <Icon name="git-branch" className="h-3.5 w-3.5" /> },
+    files: { id: 'files', label: t('mobile.menu.files'), icon: <Icon name="file-text" className="h-3.5 w-3.5" /> },
+    terminal: { id: 'terminal', label: t('mobile.menu.terminal'), icon: <Icon name="terminal" className="h-3.5 w-3.5" /> },
+    notes: { id: 'notes', label: t('contextRail.surface.notes'), icon: <Icon name="sticky-note" className="h-3.5 w-3.5" /> },
+    mcp: { id: 'mcp', label: t('mobile.menu.mcp'), icon: <McpIcon className="h-3.5 w-3.5" /> },
+  } satisfies Record<MobileWorkspaceTab, SortableTabsStripItem>;
+  // The user's tabs in their order (Settings > General), plus a hidden one
+  // while something opened it.
+  const stripTabs = stripMobileWorkspaceTabs(tabOrder, hiddenTabs, tab);
+  const tabItems = stripTabs.map((id) => tabDefinitions[id]);
+  const soleTab = tabItems.length === 1 ? tabItems[0] : null;
+  // A long press on a tab drags it; the new order covers hidden tabs too.
+  const reorderTabs = (activeId: string, overId: string) => {
+    const all = orderMobileWorkspaceTabs(tabOrder);
+    const from = all.findIndex((id) => id === activeId);
+    const to = all.findIndex((id) => id === overId);
+    if (from < 0 || to < 0) return;
+    setTabOrder(arrayMove(all, from, to));
+  };
 
   const body = (
     <>
@@ -213,17 +230,27 @@ export const MobileWorkspaceDrawer: React.FC<{
           {/* Mounted only while shown; nonCompositedIndicator keeps the active
               pill off its own compositing layer — creating one inside the
               drawer's slide flickers in WKWebView. */}
-          {visible ? (
+          {/* One tab has nothing to switch to: it is named, not offered. */}
+          {soleTab ? (
+            <h2 className="flex min-w-0 items-center gap-2 px-1 typography-ui-header font-semibold text-foreground">
+              <span className="flex shrink-0 text-muted-foreground">{soleTab.icon}</span>
+              <span className="truncate">{soleTab.label}</span>
+            </h2>
+          ) : visible ? (
             <SortableTabsStrip
               items={tabItems}
               activeId={tab}
-              onSelect={(id) => onTabChange(id as MobileWorkspaceTab)}
+              onSelect={(id) => {
+                const next = stripTabs.find((entry) => entry === id);
+                if (next) onTabChange(next);
+              }}
+              onReorder={reorderTabs}
               layoutMode="fit"
               variant="active-pill"
               nonCompositedIndicator
-              // Five tabs don't fit with labels — the active tab keeps
-              // icon + label, the rest collapse to icons.
-              inactiveTabsIconOnly
+              // More than three tabs don't fit with labels: the active tab
+              // keeps icon + label, the rest collapse to icons.
+              inactiveTabsIconOnly={tabItems.length > 3}
               className="h-full"
             />
           ) : null}
