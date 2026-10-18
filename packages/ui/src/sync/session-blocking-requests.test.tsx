@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { OpenCode } from '@opencode/client'
 import { opencodeClient } from '@/lib/opencode/client'
 import type { FormRequest, PermissionRequest } from '@/lib/opencode/model'
-import { applyGlobalBlockingRequestEvents, resetGlobalBlockingRequests, seedGlobalBlockingRequests } from './global-blocking-requests'
+import { applyGlobalBlockingRequestEvents, readHostBlockingRequestsSnapshot, resetGlobalBlockingRequests } from './global-blocking-requests'
 import { SyncProvider, useDirectoryStore, useSessionBlockingRequests } from './sync-context'
 import { installHookTestDom } from '../components/session/sidebar/test-utils/testDom'
 
@@ -149,9 +149,11 @@ describe('useSessionBlockingRequests', () => {
         expect(rendered).toEqual({ hasPermission: false, hasForm: false })
 
         // The startup seed, not a live event: the unbootstrapped store stays empty.
-        await act(async () => seedGlobalBlockingRequests([
-          { sessionId: 'child', directory: CHILD_DIR, permissions: [], forms: [{ id: 'seeded-form', sessionID: 'child', title: 'Answer' }] },
-        ]))
+        await act(async () => { await readHostBlockingRequestsSnapshot(async () => ({
+          sessions: {},
+          pending: { child: { permissions: [], forms: [{ id: 'seeded-form', sessionID: 'child', title: 'Answer' }], pages: [] } },
+          serverTime: 0,
+        }), () => CHILD_DIR) })
         expect(stores!.child.getState().form.child).toBeUndefined()
         expect(rendered).toEqual({ hasPermission: false, hasForm: true })
 
@@ -170,9 +172,11 @@ describe('useSessionBlockingRequests', () => {
     try {
       await withProbe(true, async () => {
         // The index kept a form whose `form.settled` event was lost.
-        await act(async () => seedGlobalBlockingRequests([
-          { sessionId: 'child', directory: CHILD_DIR, permissions: [], forms: [{ id: 'answered-form', sessionID: 'child', title: 'Answer' }] },
-        ]))
+        await act(async () => { await readHostBlockingRequestsSnapshot(async () => ({
+          sessions: {},
+          pending: { child: { permissions: [], forms: [{ id: 'answered-form', sessionID: 'child', title: 'Answer' }], pages: [] } },
+          serverTime: 0,
+        }), () => CHILD_DIR) })
         expect(rendered?.hasForm).toBe(true)
 
         // The directory's own bootstrap read its pending forms and found none.

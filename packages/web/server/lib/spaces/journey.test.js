@@ -218,7 +218,17 @@ describe('the journey: create', () => {
     expect(space.projectDirectory).toBe(registered);
     expect(await until(() => steps(events, space.id).includes('ready'))).toBe(true);
     expect(records.read(space.id).record.repository).toBe(registered);
+    // The drive letter in either case names the same drive.
+    const lowerDrive = await journey.createSpace({ ...REQUEST, projectDirectory: 'c:/Users/me/project' });
+    expect(lowerDrive.projectDirectory).toBe(registered);
     await expect(journey.createSpace({ ...REQUEST, projectDirectory: 'C:/Users/me/other' })).rejects.toMatchObject({ code: 'project_not_registered' });
+  });
+
+  it('takes a project the settings keep with a lower-case drive letter in either case', async () => {
+    const registered = 'c:\\Users\\me\\project';
+    const { journey } = journeyWith({ projects: [registered], resolveDirectory: path.win32.resolve });
+    expect((await journey.createSpace({ ...REQUEST, projectDirectory: 'C:/Users/me/project' })).projectDirectory).toBe(registered);
+    expect((await journey.createSpace({ ...REQUEST, projectDirectory: 'c:/Users/me/project' })).projectDirectory).toBe(registered);
   });
 
   it('refuses a bad request before anything runs', async () => {
@@ -1237,6 +1247,25 @@ describe('the journey: a provider of the user\'s own', () => {
     expect(onDisk).not.toContain('11434');
     expect(onDisk).not.toContain('sk-lighthouse');
     expect(JSON.stringify(await journey.listSpaces({ access: true }))).not.toContain('sk-lighthouse');
+  });
+
+  it('gives OpenCode inside the window address of each custom provider chosen at creation at its start, so a project\'s own definition cannot win', async () => {
+    const memory = createMemoryPlace();
+    const startConfigs = [];
+    const place = { ...memory, create: async (spec, options) => { startConfigs.push(options.startConfig); return memory.create(spec, options); } };
+    const { journey, events } = journeyWith({ place, hostProviders: hostProvidersOf({ 'ollama-local': OLLAMA }) });
+    // A provider the host no longer defines is left out; the grant itself fails as it would later.
+    const { id } = await journey.createSpace({ ...REQUEST, grants: [{ kind: 'custom', provider: 'ollama-local' }, { kind: 'custom', provider: 'nowhere' }] });
+    expect(await until(() => steps(events, id).includes('ready'))).toBe(true);
+    expect(startConfigs).toHaveLength(1);
+    expect(JSON.parse(startConfigs[0])).toEqual({
+      providers: { 'ollama-local': { settings: { baseURL: 'http://gatekeeper:8080/model/ollama-local', apiKey: 'space-window' } } },
+    });
+
+    const { journey: plain, events: plainEvents } = journeyWith({ place: { ...memory, create: async (spec, options) => { startConfigs.push(options.startConfig); return memory.create(spec, options); } } });
+    const { id: plainId } = await plain.createSpace(REQUEST);
+    expect(await until(() => steps(plainEvents, plainId).includes('ready'))).toBe(true);
+    expect(startConfigs[1]).toBeNull();
   });
 
   it('refuses a provider the host does not define, one whose SDK the window cannot serve, and one without an address', async () => {

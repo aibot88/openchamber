@@ -126,6 +126,33 @@ xAI quota reports the SuperGrok billing cycle from `POST https://grok.com/grok_a
 6. Update this file with the new provider ID, module path, and alias/auth details.
 7. Validate with `bun run type-check`, `bun run lint`, and `bun run build`.
 
+## Google OAuth client compatibility
+
+The `google` quota provider reads the active OpenCode login. Gemini CLI and
+Antigravity both pack project context into the refresh token with `|`, and a
+generic OAuth method with empty metadata does not identify its issuing client.
+The provider keeps the Gemini model keys and quota parsing for either login.
+
+Expired or missing access tokens first use the Gemini CLI OAuth client. Only
+HTTP 400/401 with the parsed OAuth code `unauthorized_client` permits one attempt
+with the Antigravity client. This compatibility probe leaves the selected
+credential unchanged. Other authorization errors, bare HTTP failures, malformed
+responses, rate limits, and transport failures never trigger the alternate
+client. A valid access token requires no exchange.
+
+`providers/google/oauth.js` owns the shared refresh logic and installed-app
+client constants for web/Electron and VS Code, including direct Antigravity
+refreshes which use only their own client. Exchanges go to the fixed Google token
+URL, reject redirects, and have a 15-second deadline each. Failures preserve HTTP
+status and an allowlisted OAuth code, or a transport/response category internally.
+The panel keeps its existing refresh failure text; raw error bodies and exception
+messages never reach the quota result. Failed refreshes
+return configured failure without querying quota with expired access.
+
+Refreshes are read-only with respect to OpenCode credentials. Neither a guessed
+client nor refreshed tokens are written back. Refresh-token rotation and changes
+to quota endpoint semantics are outside this compatibility fix.
+
 ## Antigravity quota and limit semantics
 
 Antigravity reports dual-layer quota for Google Cloud Code / Antigravity IDE accounts, querying Google's `retrieveUserQuotaSummary` endpoint (falling back to `daily-cloudcode-pa.googleapis.com` and `fetchAvailableModels` flat quotaInfo).
@@ -232,6 +259,14 @@ completion quota are intentionally omitted. Keep
 `packages/web/server/lib/quota/providers/copilot.js` and
 `packages/vscode/src/quotaProviders.ts` in sync.
 
+For github.com, the quota request uses `https://api.github.com/copilot_internal/user`.
+For GitHub Enterprise, it uses `https://api.<enterprise-host>/copilot_internal/user`,
+with the host taken from the `enterpriseUrl` on the active OpenCode Copilot login, so
+the request and the login token only ever reach that server. The accepted value is a
+bare origin whose hostname is a DNS name: credentials, a port, a path, a query, a
+fragment, a non-HTTP scheme, or a hostname that is not a DNS name fail before the
+request is made, and the token is never sent.
+
 The `/copilot_internal/user` endpoint is undocumented; its quota semantics mirror
 what `microsoft/vscode-copilot-chat` consumes (`CopilotUserQuotaInfo`). Each
 snapshot carries `entitlement`, `remaining`, `unlimited`, and
@@ -241,6 +276,32 @@ snapshot carries `entitlement`, `remaining`, `unlimited`, and
 - Percent math requires a positive `entitlement`; entitlements of `0`, `-1`, or null are unusable.
 - When entitlement/remaining are unusable, fall back to `100 - percent_remaining`.
 - Snapshots other than `premium_interactions` (legacy annual plans) yield zero windows.
+
+**The value label reports credits used, not requests, and uses the same axis as
+VS Code.** Premium interactions are a fractional credit pool, not an integer
+request count: a Business plan mid-cycle reports `entitlement: 60000` with
+`percent_remaining: 65.1` and both `remaining: 39078` and `quota_remaining:
+39078.5`. `remaining` is the integer twin of `quota_remaining`, so it drops the
+half credit the account actually still holds; `quota_remaining` wins when both
+are present. The consumed figure is `entitlement - quota_remaining`, the same
+derivation GitHub's own Copilot panel uses, which for those live numbers gives
+20,921.5 credits spent and a `20,921.5 / 60,000 used` label. An entitlement that is
+unusable for the percent also yields no label, since the label and the percent share
+one derivation.
+
+Reporting the remaining axis instead (`39078 / 60000 left`) contradicted what the
+row's own percent, progress bar, and the used/remaining display toggle reported,
+and stated the opposite of VS Code for the same account at the same moment.
+`credits_used` (20,910 live) is monotonic consumption since the last reset and is
+deliberately not used as the label: it lags `percent_remaining` and would not sum
+to the entitlement.
+
+The label is fixed to the used axis, so with the display preference set to
+`remaining` the bar and its caption flip to remaining while the number still reads
+`… used`. That mismatch is accepted deliberately: the Kimi section of this document
+declined a `valueLabel` for exactly this reason, and the label suppressing the
+percent is the defect this change removes, so shipping the percent instead would
+trade a wrong number for no number.
 
 ## OpenRouter key semantics
 

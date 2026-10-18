@@ -1119,6 +1119,20 @@ html:not(.dark) .chat-scroll {
   }
 }
 
+/* Git panel header: gives up room in steps while its row does not fit, as
+   measured by useToolbarFit in GitHeader. The repository picker shrinks
+   first; the branch picker keeps its width until that is not enough. Then
+   the sync button drops its word, keeping its icon, counts and tooltip; the
+   counts go last. */
+[data-git-header-branch-shrinks] .branch-selector__trigger {
+  flex-shrink: 1;
+}
+
+[data-git-header-compact] .sync-actions__label,
+[data-git-header-tight] .sync-actions__text {
+  display: none;
+}
+
 /* Diff toolbar: labels collapse to icons only when the row does not fit, as
    measured by useDiffToolbarFit. The walkthrough label goes first. Review is
    the primary action in this row, so it keeps its label longest; the

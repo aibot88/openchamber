@@ -21,6 +21,7 @@ import { providersI18n } from './providers.i18n';
 import { mcpGridI18n } from './mcp-grid.i18n';
 import { pluginsGridI18n } from './plugins-grid.i18n';
 import { integrationsCatalogI18n } from './integrations-catalog.i18n';
+import { diffFindI18n } from './diff-find.i18n';
 
 export const dict = {
   'opencodeCompatibility.bundled': 'OpenCode מגיע יחד עם OpenChamber. יש לעדכן את OpenChamber כדי לקבל את OpenCode v2.',
@@ -2250,6 +2251,9 @@ export const dict = {
   'session.newWorktree.toast.worktreeCreatedDescription': '{target} - ההכנה מתבצעת ברקע',
   'session.newWorktree.toast.fetchSourceFailed': 'לא ניתן היה להביא מהמאגר המרוחק — נוצר מהמצב המקומי',
   'session.newWorktree.toast.fetchSourceAccess': 'לא ניתן היה להביא: הגישה למאגר הזה דורשת טיפול ב„הגדרת מאגר”. נוצר מהמצב המקומי.',
+  'session.newWorktree.toast.startFolderMissing': 'ב-worktree הזה אין תיקייה "{folder}", ולכן OpenCode התחיל בשורש ה-worktree.',
+  'session.newWorktree.toast.startFolderUnverified': 'לא ניתן לבדוק את התיקייה "{folder}", ולכן OpenCode התחיל בשורש ה-worktree.',
+  'session.newWorktree.toast.startFolderUnknown': 'לא ניתן לקבוע איזו תיקייה במאגר הפרויקט הזה פותח, ולכן OpenCode התחיל בשורש ה-worktree.',
   'session.newWorktree.toast.branchBackup': 'הענף {branch} תואם עכשיו לענף המרוחק. הקומיטים הקודמים שלו נשמרו ב-{backup}.',
   'session.githubIntegration.tabs.pullRequests': 'בקשות משיכה',
   'session.githubIntegration.validation.branchAlreadyCheckedOut': 'הענף כבר פתוח בעץ עבודה',
@@ -2383,6 +2387,7 @@ export const dict = {
   'chat.queuedMessage.edit': 'עריכה',
   'chat.queuedMessage.send': 'שליחה',
   'chat.queuedMessage.removeAria': 'הסר מתור ההמתנה',
+  'chat.queuedMessage.goal': 'מתחיל יעד כשההודעה נשלחת',
   'chat.queuedMessage.reorderAria': 'גרור כדי לשנות סדר',
   'chat.queuedMessage.toast.queueFailed': 'לא ניתן היה להוסיף את ההודעה לתור. היא הוחזרה לתיבת הכתיבה.',
   'chat.queuedMessage.toast.takeFailed': 'לא ניתן היה לטעון את ההודעה מהתור. יש לנסות שוב.',
@@ -2703,6 +2708,7 @@ export const dict = {
   'chat.modelControls.clearSearch': 'נקה חיפוש',
   'chat.modelControls.current': 'נוכחי',
   'chat.modelControls.thinking': 'חשיבה',
+  'chat.modelControls.inheritedVariantTooltip': 'חשיבה: {variant}, ברירת המחדל של המודל הזה',
   'chat.modelControls.default': 'ברירת מחדל',
   'chat.modelControls.selectAgent': 'בחר סוכן',
   'chat.modelControls.costPerMillion': 'עלות ($ ל-1M טוקנים)',
@@ -3799,6 +3805,7 @@ export const dict = {
   ...mcpGridI18n.he,
   ...pluginsGridI18n.he,
   ...integrationsCatalogI18n['he'],
+  ...diffFindI18n['he'],
   'settings.usage.page.state.claudeSignedOutTitle': 'לא מחובר ל-Claude Code',
   'settings.usage.page.state.claudeSignInCommand': 'יש להריץ את הפקודה הזו במסוף:',
   'settings.openchamber.visual.field.confirmFileTreeMove': 'אישור לפני העברת קבצים',

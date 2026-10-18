@@ -68,6 +68,51 @@ folder as a project and opens a new session draft in it, where the Git panel
 commits. The listing reads again when the entry's `contentRevision` moves.
 Mobile Changes still shows only the note for such a row.
 
+## Find in changes
+
+Changes and the walkthrough search their whole changeset from one bar
+(`diffFind/`). Cmd/Ctrl+F opens it through the `find_in_file` registration,
+which declines while the surface is hidden, while another surface's text field
+holds focus, and for a key pressed inside another element marked
+`data-find-surface` (Files carries it too); Files, the Markdown preview and the
+chat composer then keep the key. A Cmd/Ctrl-click on a word opens the bar on
+that word and lands on the next occurrence after the clicked one, told apart by
+side, since a deletion and an addition row can share a line number and offset.
+
+`useDiffFind` owns the query, the matches and the reads; `useDiffFindSurface`
+connects it to the viewers on screen. Each surface hands it a source per file
+whose `load` reads what the viewer shows: the side (staged or unstaged), the
+whitespace mode, a file's full contents once its collapsed context was
+expanded, a pull request file rebuilt from both sides. A nested repository's row
+resolves to that repository's files, read from that repository and keyed by the
+row path plus their own path, the key their viewers register under. Reads run
+one at a time while the bar is open, and the active match is followed by what it
+points at, so a file landing or re-read ahead of it does not move the view. A read that fails is counted in the bar
+and read again the next time the bar opens, so one unreadable file never turns
+into a silent zero. A file Git no longer has, or a folder it keeps as one row,
+has nothing to search.
+
+Matches are painted as `<mark>` elements in the viewer's shadow root, tinted
+from `--status-warning`. The library replaces rows when it renders, so the marks
+are re-applied from `onPostRender` and from the shadow-root observer, and the
+surgery drains its own mutation records so it never schedules itself. A jump
+moves the line into view only once its row is rendered: a virtualized diff is
+first moved to the line's estimated position, then the rendered row is centered.
+The jump keeps trying for a few seconds and starts over when the viewer for the
+match mounts, so a file that is still loading, or behind the large-diff gate the
+jump lifts, is still reached. In the walkthrough a mounted run is reached by the
+line scroll alone: the step jump pins the step's header to the top and holds it
+there while the stream settles, away from a match deep in a long step. Marks
+wrap each text node of a match inside its own syntax token, so clearing them
+gives a row back its exact structure.
+
+### Why the search reads files itself and not the viewers' data
+
+Most files of a changeset are collapsed and have never been read, so their
+matches have to come from somewhere other than a mounted viewer. Each source's
+`revision` names what its data depends on, so the bar re-reads a file exactly
+when the viewer would show something different.
+
 `WalkthroughView` gates discovery and source loading while retaining generated
 results and any explicitly started generation job.
 
@@ -82,6 +127,13 @@ walkthrough behaves the same on every surface. The panel header never wraps:
 then the step arrows and Generate, then the scope label), with the CSS in
 `index.css`.
 
+The Git panel header (`git/GitHeader.tsx`) collapses the same way. The
+repository picker truncates down to its icon and chevron first, then the
+branch picker; their names sit in a grid track with no minimum, so neither
+picker shrinks past its icons. Only while the pickers still overflow their slot
+does the sync button drop its word, and at the narrowest widths its counts;
+its tooltip names both. The panel keeps its 320 px minimum.
+
 ## Large text files
 
 The 200,000-character threshold selects an initial code preview, not read-only
@@ -93,6 +145,10 @@ snapshot and draft, and restores the detected line ending on save. Preview
 limits must never truncate a writable draft or its dirty-comparison baseline.
 Large code previews render the current draft and hash its full content only
 while previewing, so same-length edits in the middle invalidate cached output.
+
+Markdown plan previews use the file preview's local-asset handling. Relative
+images resolve from the plan file's directory, including personal plans stored
+under the OpenChamber data directory and repository plans in a custom folder.
 
 ## JSON tree previews
 

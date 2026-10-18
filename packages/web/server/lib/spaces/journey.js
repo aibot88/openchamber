@@ -47,7 +47,7 @@ import { headerOfPackage, windowUpstreamOf } from './host-providers.js';
 import { permissionDefaultOf } from './space-permission-default.js';
 import { ROLE_GATEKEEPER, createSpaceId, hashProjectDirectory, spaceResourceName } from './labels.js';
 import { spaceProjectPath, spaceWindowUrl } from './layout.js';
-import { LOGIN_PROVIDERS, loginEndOf, loginEnded, loginGrantOf } from './space-opencode.js';
+import { LOGIN_PROVIDERS, buildStartConfig, loginEndOf, loginEnded, loginGrantOf } from './space-opencode.js';
 import { domainSchema, grantSchema, networkSchema, providerIdSchema, secretSourceSchema } from './space-records.js';
 import { createSpaceToken } from './space-server.js';
 import { createSpaceSetup, setupCommandsSchema } from './space-setup.js';
@@ -69,6 +69,9 @@ const createRequestSchema = z.object({
   // A typed key lives only in this request and the gatekeeper, as with the grant dialog.
   grants: z.lazy(() => creationGrantsSchema).default([]),
 });
+// A Windows path names its drive in either case; a POSIX path never starts with a letter and a colon.
+const withUpperDrive = (directory) => directory.replace(/^[a-z]:/, (drive) => drive.toUpperCase());
+
 const CREATE_REFUSALS = {
   placeId: ['place_not_found', 'A space is made on one of the configured places.'],
   projectDirectory: ['project_not_registered', 'A space is made for a project this OpenChamber knows. Add the project first, then create the space.'],
@@ -264,15 +267,14 @@ export function createSpaceJourney({
   };
 
   // The UI sends a project's folder in its own spelling, with forward slashes on Windows, while the
-  // settings keep the system's; both resolve to the same path. The space is made for the folder as
-  // the settings name it.
+  // settings keep the system's; both resolve to the same path, up to the case of a Windows drive
+  // letter, which names the same drive either way. The space is made for the folder as the
+  // settings name it.
   const requireRegisteredProject = async (directory) => {
-    const resolved = resolveDirectory(directory);
-    const projects = await registeredProjects();
-    if (projects.get(hashProjectDirectory(resolved)) !== resolved) {
-      throw new SpaceError(...CREATE_REFUSALS.projectDirectory);
-    }
-    return resolved;
+    const resolved = withUpperDrive(resolveDirectory(directory));
+    const registered = (await listProjectDirectories()).find((candidate) => withUpperDrive(candidate) === resolved);
+    if (registered === undefined) throw new SpaceError(...CREATE_REFUSALS.projectDirectory);
+    return registered;
   };
 
   const progress = (entry, step, failure = null) => {
@@ -373,7 +375,11 @@ export function createSpaceJourney({
         throw new SpaceError('place_cannot_restrict_network', 'This place cannot keep a space away from the machine it runs on, so an allowlist would not hold. Use a newer Docker engine, or choose the open network with that in mind.');
       }
       progress(entry, 'creating');
-      await manager.createSpace({ id: entry.id, placeId, projectDirectory, name, onStep: (step) => progress(entry, step) });
+      // OpenCode inside reads this over every configuration file, so a custom provider the
+      // project's own `.opencode/opencode.json` defines too still goes through the window. Only
+      // the providers the host defines now: the grant of any other fails below anyway.
+      const startConfig = buildStartConfig([...(await customDefinitionsOf(grants, projectDirectory)).keys()]);
+      await manager.createSpace({ id: entry.id, placeId, projectDirectory, name, onStep: (step) => progress(entry, step), startConfig });
       created = true;
       // With the place, the name and the time, so the space is still listed while its place cannot be asked.
       records.write(entry.id, { placeId, name: entry.name, created: entry.created, network, repository: projectDirectory });

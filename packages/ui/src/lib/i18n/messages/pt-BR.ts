@@ -22,6 +22,7 @@ import { providersI18n } from './providers.i18n';
 import { mcpGridI18n } from './mcp-grid.i18n';
 import { pluginsGridI18n } from './plugins-grid.i18n';
 import { integrationsCatalogI18n } from './integrations-catalog.i18n';
+import { diffFindI18n } from './diff-find.i18n';
 
 export const dict: Record<I18nKey, string> = {
   "opencodeCompatibility.bundled": "O OpenCode está incluído no OpenChamber. Atualize o OpenChamber para obter o OpenCode v2.",
@@ -163,6 +164,7 @@ export const dict: Record<I18nKey, string> = {
   ...mcpGridI18n['pt-BR'],
   ...pluginsGridI18n['pt-BR'],
   ...integrationsCatalogI18n['pt-BR'],
+  ...diffFindI18n['pt-BR'],
   'terminalView.actions.attachSelection': 'Anexar saída selecionada',
   'terminalView.actions.copySelection': 'Copiar saída selecionada',
   'terminalView.toast.selectionCopied': 'Saída copiada',
@@ -2265,6 +2267,9 @@ export const dict: Record<I18nKey, string> = {
   "session.newWorktree.toast.worktreeCreatedDescription": "{target} - configurando em segundo plano",
   "session.newWorktree.toast.fetchSourceFailed": "Não foi possível buscar do remoto — criado a partir do estado local",
   "session.newWorktree.toast.fetchSourceAccess": "Não foi possível buscar: o acesso a este repositório precisa de atenção em Configurar repositório. Criado a partir do estado local.",
+  "session.newWorktree.toast.startFolderMissing": "Este worktree não tem a pasta \"{folder}\", então o OpenCode começou na raiz do worktree.",
+  "session.newWorktree.toast.startFolderUnverified": "Não foi possível verificar a pasta \"{folder}\", então o OpenCode começou na raiz do worktree.",
+  "session.newWorktree.toast.startFolderUnknown": "Não foi possível determinar qual pasta do repositório este projeto abre, então o OpenCode começou na raiz do worktree.",
   "session.newWorktree.toast.branchBackup": "{branch} agora corresponde ao remoto. Os commits anteriores estão em {backup}.",
   "session.githubIntegration.tabs.pullRequests": "PR",
   "session.githubIntegration.validation.branchAlreadyCheckedOut": "A branch já está em uso em um worktree",
@@ -2398,6 +2403,7 @@ export const dict: Record<I18nKey, string> = {
   "chat.queuedMessage.edit": "edit",
   "chat.queuedMessage.send": "send",
   "chat.queuedMessage.removeAria": "Excluir da fila",
+  "chat.queuedMessage.goal": "Inicia um objetivo ao ser enviada",
   "chat.queuedMessage.reorderAria": "Arraste para reordenar",
   "chat.queuedMessage.toast.queueFailed": "Não foi possível enfileirar a mensagem. Ela voltou para o campo de texto.",
   "chat.queuedMessage.toast.takeFailed": "Não foi possível carregar a mensagem da fila. Tente novamente.",
@@ -2706,6 +2712,7 @@ export const dict: Record<I18nKey, string> = {
   "chat.modelControls.clearSearch": "Limpar pesquisa",
   "chat.modelControls.current": "Atual",
   "chat.modelControls.thinking": "Pensando",
+  "chat.modelControls.inheritedVariantTooltip": "Pensando: {variant}, padrão deste modelo",
   "chat.modelControls.default": "Padrão",
   "chat.modelControls.selectAgent": "Selecionar agente",
   "chat.modelControls.costPerMillion": "Custo ($/1M tokens)",

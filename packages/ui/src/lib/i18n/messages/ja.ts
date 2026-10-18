@@ -22,6 +22,7 @@ import { providersI18n } from './providers.i18n';
 import { mcpGridI18n } from './mcp-grid.i18n';
 import { pluginsGridI18n } from './plugins-grid.i18n';
 import { integrationsCatalogI18n } from './integrations-catalog.i18n';
+import { diffFindI18n } from './diff-find.i18n';
 
 export const dict: Record<I18nKey, string> = {
   "opencodeCompatibility.bundled": "OpenCode は OpenChamber に同梱されています。OpenCode v2 を利用するには OpenChamber を更新してください。",
@@ -153,6 +154,7 @@ export const dict: Record<I18nKey, string> = {
   ...mcpGridI18n.ja,
   ...pluginsGridI18n.ja,
   ...integrationsCatalogI18n['ja'],
+  ...diffFindI18n['ja'],
   'terminalView.actions.attachSelection': '選択した出力を添付',
   'terminalView.actions.copySelection': '選択した出力をコピー',
   'terminalView.toast.selectionCopied': '出力をコピーしました',
@@ -2295,6 +2297,9 @@ export const dict: Record<I18nKey, string> = {
   'session.newWorktree.toast.worktreeCreatedDescription': '{target} - バックグラウンドでブートストラップ中',
   'session.newWorktree.toast.fetchSourceFailed': 'リモートから取得できませんでした — ローカルの状態で作成しました',
   'session.newWorktree.toast.fetchSourceAccess': '取得できませんでした: このリポジトリのアクセスを「リポジトリを設定」で確認してください。ローカルの状態で作成しました。',
+  'session.newWorktree.toast.startFolderMissing': 'この worktree には「{folder}」フォルダーがないため、OpenCode は worktree のルートで開始しました。',
+  'session.newWorktree.toast.startFolderUnverified': '「{folder}」フォルダーを確認できなかったため、OpenCode は worktree のルートで開始しました。',
+  'session.newWorktree.toast.startFolderUnknown': 'このプロジェクトがリポジトリのどのフォルダーを開いているか確認できなかったため、OpenCode は worktree のルートで開始しました。',
   'session.newWorktree.toast.branchBackup': '{branch} をリモートに合わせました。以前のコミットは {backup} に残してあります。',
   'session.githubIntegration.tabs.pullRequests': 'プルリクエスト',
   'session.githubIntegration.validation.branchAlreadyCheckedOut': 'ブランチはすでにワークツリーでチェックアウトされています',
@@ -2428,6 +2433,7 @@ export const dict: Record<I18nKey, string> = {
   'chat.queuedMessage.edit': '編集',
   'chat.queuedMessage.send': '送信',
   'chat.queuedMessage.removeAria': 'キューから削除',
+  'chat.queuedMessage.goal': '送信時にゴールを開始',
   'chat.queuedMessage.reorderAria': 'ドラッグして並び替え',
   'chat.queuedMessage.toast.queueFailed': 'メッセージをキューに追加できませんでした。入力欄に戻しました。',
   'chat.queuedMessage.toast.takeFailed': 'キューのメッセージを読み込めませんでした。もう一度お試しください。',
@@ -2751,6 +2757,7 @@ export const dict: Record<I18nKey, string> = {
   'chat.modelControls.clearSearch': '検索をクリア',
   'chat.modelControls.current': '現在',
   'chat.modelControls.thinking': '思考',
+  'chat.modelControls.inheritedVariantTooltip': '思考: {variant}（このモデルのデフォルト）',
   'chat.modelControls.default': 'デフォルト',
   'chat.modelControls.selectAgent': 'エージェントを選択',
   'chat.modelControls.costPerMillion': 'コスト（$/100万トークン）',

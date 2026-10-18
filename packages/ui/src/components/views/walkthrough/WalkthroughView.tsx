@@ -36,6 +36,8 @@ import { useEffectiveDirectory } from '@/hooks/useEffectiveDirectory';
 import { useUIStore } from '@/stores/useUIStore';
 import { useWalkthroughStore } from '@/stores/useWalkthroughStore';
 import { cn } from '@/lib/utils';
+import { DiffFindBar } from '@/components/views/diffFind/DiffFindBar';
+import { useWalkthroughFind } from './useWalkthroughFind';
 import { WalkthroughBlocker } from './WalkthroughBlocker';
 import { WalkthroughStages } from './WalkthroughStages';
 import { WalkthroughStream } from './WalkthroughStream';
@@ -361,6 +363,16 @@ export const WalkthroughView = ({ directory: rootDirectory, visible = true }: Wa
   });
   const { view } = review;
 
+  const findInWalkthrough = useWalkthroughFind({
+    view,
+    renderSideBySide,
+    visible,
+    rootRef,
+    selectStop: review.handleSelectStop,
+    markStopActive: review.handleActiveStopChange,
+  });
+  const diffFind = findInWalkthrough.find;
+
   const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const sourceValue = isPrScope ? 'pr' : isCommitScope ? 'commit' : isBranchScope ? 'branch' : source.kind === 'working-tree' ? source.scope : source.kind;
@@ -401,7 +413,7 @@ export const WalkthroughView = ({ directory: rootDirectory, visible = true }: Wa
   }
 
   return (
-    <div ref={rootRef} className="flex h-full min-h-0 flex-col">
+    <div ref={rootRef} data-find-surface="" className="flex h-full min-h-0 flex-col">
       <ContextPanelHeaderToolbar>
       <header
         ref={headerRef}
@@ -705,16 +717,35 @@ export const WalkthroughView = ({ directory: rootDirectory, visible = true }: Wa
                 />
               </>
             )}
-            <WalkthroughStream
-              view={view}
-              activeStopId={review.activeStopId}
-              scrollToStopId={review.scrollToStopId}
-              onActiveStopChange={review.handleActiveStopChange}
-              onScrollHandled={review.clearScrollRequest}
-              renderSideBySide={renderSideBySide}
-              wrapLines={wrapLines}
-              summary={showToc ? undefined : view.walkthrough.focus}
-            />
+            <div className="relative flex min-h-0 flex-1 flex-col">
+              {diffFind.isOpen && (
+                <DiffFindBar
+                  query={diffFind.query}
+                  onQueryChange={diffFind.setQuery}
+                  total={diffFind.matches.length}
+                  currentIndex={diffFind.currentIndex}
+                  isSearching={diffFind.isSearching}
+                  failedCount={diffFind.failedCount}
+                  onNext={diffFind.next}
+                  onPrevious={diffFind.previous}
+                  onClose={diffFind.close}
+                  focusNonce={findInWalkthrough.focusNonce}
+                />
+              )}
+              <WalkthroughStream
+                view={view}
+                activeStopId={review.activeStopId}
+                scrollToStopId={review.scrollToStopId}
+                onActiveStopChange={review.handleActiveStopChange}
+                onScrollHandled={review.clearScrollRequest}
+                renderSideBySide={renderSideBySide}
+                wrapLines={wrapLines}
+                summary={showToc ? undefined : view.walkthrough.focus}
+                uncoveredOpenRequest={findInWalkthrough.uncoveredOpenRequest}
+                registerFindViewerRef={findInWalkthrough.registerViewer}
+                onFindWordRequest={findInWalkthrough.openOnWord}
+              />
+            </div>
           </>
         ) : (
           <WalkthroughEmptyState review={review} />

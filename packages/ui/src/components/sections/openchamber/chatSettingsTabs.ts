@@ -26,6 +26,7 @@ const SEARCH_TARGET_TABS = new Map<string, ChatSettingsTab>([
   ['chat.wide-layout', 'messages'],
   ['chat.prompt-navigator', 'messages'],
   ['chat.collapsible-user-messages', 'messages'],
+  ['chat.sticky-user-header', 'messages'],
   ['chat.inline-assistant-actions', 'messages'],
   ['chat.user-message-rendering', 'messages'],
   ['chat.mermaid-rendering', 'messages'],
