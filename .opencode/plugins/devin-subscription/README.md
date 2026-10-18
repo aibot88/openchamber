@@ -162,6 +162,17 @@ adapter's own failure reason, such as an upstream timeout or a changed active
 connection, in the local bridge error instead of one generic message. Upstream
 error content is still never echoed, and no inference is retried.
 
+Version 0.1.5 resends a request once when the socket fails before any response
+byte arrives; the upstream cannot have produced a generation, so the retry
+cannot double it. Cancellations, header and total timeouts and mid-stream
+failures still never retry. Version 0.1.6 distinguishes a capacity refusal from
+a transport failure: a Connect `unavailable` or `resource_exhausted` trailer, an
+HTTP 429 or 503, is reported as model capacity busy, and only that class may
+wait and retry on a bounded 15/30/60/120-second schedule through the session
+retry hook. Authored refusal reasons survive the local bridge instead of the
+generic stream error, and quota, policy or decoding failures still fail without
+a retry.
+
 ## Validation
 
 The source and bundled providers pass the real OpenCode 2.0.26 offline agent loop:

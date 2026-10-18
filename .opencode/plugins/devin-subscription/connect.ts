@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { gzipSync, gunzipSync } from "node:zlib";
 import { z } from "zod";
 import { CLIENT_VERSION, MAX_BYTES } from "./constants.ts";
+import { busyCode, busyMessage } from "./capacity.ts";
 import { text } from "./protobuf.ts";
 
 export function metadata(token: string): Buffer {
@@ -79,7 +80,7 @@ export async function* frames(body: ReadableStream<Uint8Array>, signal?: AbortSi
             // Do not echo upstream messages: they may contain a credential or a
             // prompt fragment. Preserve only the standard Connect status code.
             const code = /^[a-z_]{1,40}$/.test(parsed.error.code) ? parsed.error.code : "unknown";
-            throw new Error(`Devin rejected the request (${code}). No retry, model or account fallback was attempted.`);
+            throw new Error(busyCode(code) ? busyMessage(code) : `Devin rejected the request (${code}). No retry, model or account fallback was attempted.`);
           }
           ended = true;
         } else yield decoded;

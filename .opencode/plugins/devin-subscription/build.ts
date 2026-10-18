@@ -19,7 +19,7 @@ for (const output of Object.values(result.metafile.outputs)) {
     }
   }
 }
-await writeFile(join(outdir, "package.json"), JSON.stringify({ name: "opencode-devin-subscription-v2", version: "0.1.5", private: true, type: "module", main: "./index.js" }, null, 2) + "\n");
+await writeFile(join(outdir, "package.json"), JSON.stringify({ name: "opencode-devin-subscription-v2", version: "0.1.6", private: true, type: "module", main: "./index.js" }, null, 2) + "\n");
 await copyFile(join(root, "THIRD_PARTY_NOTICES.md"), join(outdir, "THIRD_PARTY_NOTICES.md"));
 await copyFile(join(root, "README.md"), join(outdir, "README.md"));
 await mkdir(join(outdir, "licenses"), { recursive: true });

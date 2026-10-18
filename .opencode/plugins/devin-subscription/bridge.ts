@@ -21,7 +21,7 @@ export async function startBridge(send: Send, options: { env?: NodeJS.ProcessEnv
   const queued = new Map<string, Job>();
   const running = new Set<AbortController>();
   const sockets = new Set<Socket>();
-  const failures = new Map<string, ReturnType<typeof setTimeout>>();
+  const failures = new Map<string, { timer: ReturnType<typeof setTimeout>; message: string }>();
   let disposed = false;
   let origin = "";
   const ttl = options.ttlMs ?? 60_000;
@@ -31,9 +31,9 @@ export async function startBridge(send: Send, options: { env?: NodeJS.ProcessEnv
     clearTimeout(job.timer); job.request.signal.removeEventListener("abort", job.abort); queued.delete(id);
   };
   const takeFailure = (id: string) => {
-    const timer = failures.get(id);
-    if (!timer) return false;
-    clearTimeout(timer); failures.delete(id); return true;
+    const failure = failures.get(id);
+    if (!failure) return undefined;
+    clearTimeout(failure.timer); failures.delete(id); return failure.message;
   };
   const server = createServer((incoming, outgoing) => {
     incoming.resume();
@@ -72,8 +72,12 @@ export async function startBridge(send: Send, options: { env?: NodeJS.ProcessEnv
           if (next.done) break;
           if (!outgoing.write(next.value)) await once(outgoing, "drain", { signal });
         }
-      } catch {
-        const timer = setTimeout(() => failures.delete(id), ttl); timer.unref(); failures.set(id, timer);
+      } catch (error) {
+        // The stream's own message is authored text when the upstream refused;
+        // the failure record carries it so adapt does not mask the real cause.
+        const message = error instanceof Error && error.message.includes("Devin") ? error.message
+          : "Devin stream or native tool validation failed. No retry was attempted.";
+        const timer = setTimeout(() => failures.delete(id), ttl); timer.unref(); failures.set(id, { timer, message });
         await reader.cancel().catch(() => {});
       } finally { reader.releaseLock(); outgoing.end(); }
     })().catch(() => outgoing.destroy()).finally(() => running.delete(controller));
@@ -104,8 +108,10 @@ export async function startBridge(send: Send, options: { env?: NodeJS.ProcessEnv
           try {
             const next = await reader.read();
             if (!next.done) controller.enqueue(next.value);
-            else if (takeFailure(id)) controller.error(new Error("Devin stream or native tool validation failed. No retry was attempted."));
-            else controller.close();
+            else {
+              const failed = takeFailure(id);
+              if (failed === undefined) controller.close(); else controller.error(new Error(failed));
+            }
           } catch { takeFailure(id); controller.error(new Error("Devin local response stream failed.")); }
         },
         cancel() { takeFailure(id); return reader.cancel(); },
@@ -116,7 +122,7 @@ export async function startBridge(send: Send, options: { env?: NodeJS.ProcessEnv
       disposed = true;
       for (const id of queued.keys()) forget(id);
       for (const controller of running) controller.abort();
-      for (const timer of failures.values()) clearTimeout(timer);
+      for (const failure of failures.values()) clearTimeout(failure.timer);
       failures.clear();
       const close = new Promise<void>((resolve) => server.close(() => resolve()));
       for (const socket of sockets) socket.destroy();

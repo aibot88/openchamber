@@ -2,13 +2,19 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { fields, message, number, string } from "./protobuf.ts";
 import { frames } from "./connect.ts";
+import { busyCode, busyMessage, busyStatus } from "./capacity.ts";
 import type { ChatPayload } from "./request.ts";
 
 interface Call { id: string; name: string; arguments: string; invalidJson?: boolean }
 export async function subscriptionResponse(response: Response, input: ChatPayload): Promise<Response> {
   if (!response.ok) {
-    await response.body?.cancel();
-    return Response.json({ error: { message: `Devin rejected the request (HTTP ${response.status}). No retry or fallback was attempted.`, type: "devin_subscription_error" } }, { status: response.status });
+    // A Connect error body carries {code}; it classifies the refusal better
+    // than the bare HTTP status. Upstream message text is still never echoed.
+    const parsed = z.object({ code: z.string() }).partial().safeParse(await response.json().catch(() => undefined));
+    const upstream = parsed.success && parsed.data.code && /^[a-z_]{1,40}$/.test(parsed.data.code) ? parsed.data.code : undefined;
+    const detail = upstream ?? `HTTP ${response.status}`;
+    const busy = upstream ? busyCode(upstream) : busyStatus(response.status);
+    return Response.json({ error: { message: busy ? busyMessage(detail) : `Devin rejected the request (${detail}). No retry or fallback was attempted.`, type: "devin_subscription_error" } }, { status: response.status });
   }
   if (!response.body) throw new Error("Missing Devin stream body.");
   const cancellation = new AbortController();
@@ -102,10 +108,13 @@ export async function subscriptionResponse(response: Response, input: ChatPayloa
       try {
         const next = await generator.next();
         if (next.done) controller.close(); else controller.enqueue(next.value);
-      } catch {
+      } catch (error) {
         cancellation.abort();
         await iterator.return?.(undefined).catch(() => {});
-        controller.error(new Error("Devin stream decoding, completion status or native tool validation failed. No retry or fallback was attempted."));
+        // A trailer refusal's authored message (including a capacity one) is
+        // safe to surface; every other stream failure keeps the generic text.
+        controller.error(error instanceof Error && error.message.startsWith("Devin rejected the request") ? error
+          : new Error("Devin stream decoding, completion status or native tool validation failed. No retry or fallback was attempted."));
       }
     },
     async cancel() { cancellation.abort(); await iterator.return?.(undefined).catch(() => {}); await generator.return(undefined).catch(() => {}); },

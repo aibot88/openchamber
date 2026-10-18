@@ -2,6 +2,7 @@ import { Plugin, Provider } from "@opencode/plugin";
 import type { ConnectionInfo } from "@opencode/client";
 import { fileURLToPath } from "node:url";
 import { PROVIDER_ID, INTEGRATION_ID, IMPORT_METHOD_ID, ORIGIN, type Send } from "./constants.ts";
+import { busyRetry, isBusy } from "./capacity.ts";
 import { createCatalogLoader, identity, models } from "./catalog.ts";
 import { connectionToken } from "./credentials.ts";
 import { createHTTP } from "./http.ts";
@@ -105,7 +106,11 @@ export async function setup(ctx: Context, testing: { send?: Send; bridgeEnv?: No
     event.request = bridge.rewrite({ ...job, beforeSend: () => assertUnchanged(before) });
   }, { providerID: PROVIDER_ID });
   await ctx.session.hook("http.response", (event) => { event.response = bridge.adapt(event.request, event.response); }, { providerID: PROVIDER_ID });
-  await ctx.session.hook("retry", (event) => { event.decision = { retry: false }; }, { providerID: PROVIDER_ID });
+  // Capacity rejections only clear by waiting, so those retry on a bounded
+  // schedule; every other failure stays manual, including quota and policy.
+  await ctx.session.hook("retry", (event) => {
+    event.decision = isBusy(event.error.message + (event.error.response?.body ?? "")) ? busyRetry(event.attempt) : { retry: false };
+  }, { providerID: PROVIDER_ID });
   void refreshInventory().catch(() => {});
   void (async () => {
     for await (const event of ctx.event.subscribe({ signal: lifecycle.signal })) {
