@@ -53,7 +53,15 @@ export async function startBridge(send: Send, options: { env?: NodeJS.ProcessEnv
         signal.throwIfAborted();
         response = await subscriptionResponse(await send(new Request(job.request, { signal })), job.input);
       }
-      catch { response = Response.json({ error: { message: "Devin transport failed before a response arrived. No retry or fallback was attempted." } }, { status: 502 }); }
+      catch (error) {
+        // Authored failures name their cause and never carry upstream content.
+        // Anything foreign keeps the generic message: a platform error could
+        // echo a destination or payload fragment the user should not see.
+        const message = error instanceof Error && error.message.includes("Devin")
+          ? error.message
+          : "Devin transport failed before a response arrived. No retry or fallback was attempted.";
+        response = Response.json({ error: { message } }, { status: 502 });
+      }
       outgoing.writeHead(response.status, { "Content-Type": response.headers.get("content-type") ?? "application/json" });
       if (!response.body) { outgoing.end(); return; }
       const reader = response.body.getReader();

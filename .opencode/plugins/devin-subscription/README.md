@@ -155,6 +155,13 @@ so the adapter does not infer an independent `limit.input` or sum the bounds.
 An unknown context window is not a promise of unlimited input; automatic
 compaction cannot rely on a service window that has not been reported.
 
+Version 0.1.4 gives each direct upstream request a fresh socket instead of
+reusing a pooled keep-alive connection, raises the response-header deadline
+from 30 to 120 seconds to match the stream idle bound, and surfaces the
+adapter's own failure reason, such as an upstream timeout or a changed active
+connection, in the local bridge error instead of one generic message. Upstream
+error content is still never echoed, and no inference is retried.
+
 ## Validation
 
 The source and bundled providers pass the real OpenCode 2.0.26 offline agent loop:

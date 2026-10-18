@@ -60,13 +60,29 @@ test("pre-dispatch abort and invalid destination never invoke the sender", async
   } finally { transport.dispose(); }
   await expect(transport.send(request())).rejects.toThrow("closed");
 });
-test("network failures are redacted and are not retried", async () => {
+test("a socket failure before the response retries once, then surfaces its code", async () => {
   const server = createServer((incoming) => incoming.socket.destroy()); server.listen(0, "127.0.0.1"); await once(server, "listening");
   const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   let sends = 0;
   const transport = createHTTP({ env: {}, request: (_url, options, callback) => { sends++; return httpRequest(origin, options, callback); } });
-  try { await expect(transport.send(request())).rejects.toThrow("No fallback"); expect(sends).toBe(1); }
+  try { await expect(transport.send(request())).rejects.toThrow("after one retry"); expect(sends).toBe(2); }
   finally { transport.dispose(); server.closeAllConnections(); await new Promise<void>((resolve) => server.close(() => resolve())); }
+});
+
+test("a first-attempt socket reset recovers on the retry", async () => {
+  let sockets = 0;
+  const server = createServer((incoming, outgoing) => {
+    if (++sockets === 1) { incoming.socket.destroy(); return; }
+    incoming.resume(); incoming.on("end", () => { outgoing.writeHead(200, { "Content-Type": "application/proto" }); outgoing.end("fixture-recovered"); });
+  });
+  server.listen(0, "127.0.0.1"); await once(server, "listening");
+  const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  let sends = 0;
+  const transport = createHTTP({ env: {}, request: (_url, options, callback) => { sends++; return httpRequest(origin, options, callback); } });
+  try {
+    expect(await (await transport.send(request())).text()).toBe("fixture-recovered");
+    expect(sends).toBe(2);
+  } finally { transport.dispose(); server.closeAllConnections(); await new Promise<void>((resolve) => server.close(() => resolve())); }
 });
 
 test.each(["headers", "idle", "total", "signal", "dispose", "body-cancel"] as const)("%s stops the active HTTP request without retry", async (reason) => {
@@ -86,7 +102,7 @@ test.each(["headers", "idle", "total", "signal", "dispose", "body-cancel"] as co
     request: (_url, options, callback) => { sends++; return httpRequest(origin, options, callback); } });
   const controller = new AbortController();
   try {
-    if (reason === "headers") await expect(transport.send(request(CHAT_PATH, controller.signal))).rejects.toThrow("No fallback");
+    if (reason === "headers") await expect(transport.send(request(CHAT_PATH, controller.signal))).rejects.toThrow("did not send a response in time");
     else {
       const response = await transport.send(request(CHAT_PATH, controller.signal));
       if (reason === "body-cancel") await response.body!.cancel();
@@ -102,6 +118,17 @@ test.each(["headers", "idle", "total", "signal", "dispose", "body-cancel"] as co
     clearInterval(ticker); transport.dispose(); server.closeAllConnections();
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
+});
+
+test("a stalled request before headers reports the total limit, not a socket failure", async () => {
+  const server = createServer(() => {}); server.listen(0, "127.0.0.1"); await once(server, "listening");
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("Expected a loopback test listener.");
+  const origin = `http://127.0.0.1:${address.port}`;
+  const transport = createHTTP({ env: {}, headerMs: 10_000, totalMs: 30,
+    request: (_url, options, callback) => httpRequest(origin, options, callback) });
+  try { await expect(transport.send(request())).rejects.toThrow("total time limit"); }
+  finally { transport.dispose(); server.closeAllConnections(); await new Promise<void>((resolve) => server.close(() => resolve())); }
 });
 
 test("malformed proxy credentials fail before sending and are never included in errors", async () => {

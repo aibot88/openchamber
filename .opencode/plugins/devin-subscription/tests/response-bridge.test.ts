@@ -107,6 +107,20 @@ test("queued cancellation and disposal expire tickets before dispatch", async ()
   bridge.rewrite(job()); await bridge.dispose(); expect(bridge.pendingJobs()).toBe(0); expect(sends).toBe(0);
   expect(() => bridge.rewrite(job())).toThrow("closed");
 });
+test("a failed dispatch surfaces the authored reason and stays generic for unknown causes", async () => {
+  const bridge = await startBridge(async () => { throw new Error("Devin upstream did not send a response in time. No retry was attempted."); }, { env: {} });
+  try {
+    const result = await fetch(bridge.rewrite(job()));
+    expect(result.status).toBe(502);
+    expect((await result.json()).error.message).toContain("did not send a response in time");
+  } finally { await bridge.dispose(); }
+  const foreign = await startBridge(async () => { throw new Error("socket hang up"); }, { env: {} });
+  try {
+    const result = await fetch(foreign.rewrite(job()));
+    expect(result.status).toBe(502);
+    expect((await result.json()).error.message).toBe("Devin transport failed before a response arrived. No retry or fallback was attempted.");
+  } finally { await foreign.dispose(); }
+});
 test("a connection changed while a ticket was queued stops before any upstream send", async () => {
   let sends = 0;
   const bridge = await startBridge(async () => { sends++; return response(); }, { env: {} });
