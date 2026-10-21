@@ -10,7 +10,9 @@ import type { WalkthroughStopView, WalkthroughView } from '@/lib/walkthrough/mod
 import type { WalkthroughHunk, WalkthroughStopImportance } from '@/lib/walkthrough/types';
 import { cn } from '@/lib/utils';
 import { WalkthroughHunkRun } from './WalkthroughHunkRun';
+import { findRunKey, UNCOVERED_STOP_ID } from './walkthroughFind';
 import { stopElementId } from './stopElementId';
+import type { DiffFindWordRequest, PierreDiffViewerHandle } from '@/components/views/PierreDiffViewer';
 
 interface WalkthroughStreamProps {
   view: WalkthroughView;
@@ -22,6 +24,12 @@ interface WalkthroughStreamProps {
   wrapLines: boolean;
   /** What the change is about, shown above the first step when the contents column is hidden. */
   summary?: string;
+  /** Find-in-walkthrough: opens the uncovered tail each time it moves past 0. */
+  uncoveredOpenRequest?: number;
+  /** Find-in-walkthrough: register each stop run's rendered viewer handle. */
+  registerFindViewerRef?: (runKey: string, handle: PierreDiffViewerHandle | null) => void;
+  /** Find-in-walkthrough: a modifier-click on a word, tagged with its run. */
+  onFindWordRequest?: (runKey: string, request: DiffFindWordRequest) => void;
 }
 
 // How long a jump holds its target in place while the diffs above it mount.
@@ -97,13 +105,19 @@ const FileHeader = ({ path }: { path: string }) => (
 );
 
 const HunkRuns = ({
+  stopId,
   hunks,
   renderSideBySide,
   wrapLines,
+  registerFindViewerRef,
+  onFindWordRequest,
 }: {
+  stopId: string;
   hunks: WalkthroughHunk[];
   renderSideBySide: boolean;
   wrapLines: boolean;
+  registerFindViewerRef?: (runKey: string, handle: PierreDiffViewerHandle | null) => void;
+  onFindWordRequest?: (runKey: string, request: DiffFindWordRequest) => void;
 }) => {
   const runs = useMemo(() => groupHunksByFile(hunks), [hunks]);
 
@@ -117,6 +131,9 @@ const HunkRuns = ({
             hunks={run.hunks}
             renderSideBySide={renderSideBySide}
             wrapLines={wrapLines}
+            runKey={findRunKey(stopId, index, run.hunks)}
+            registerFindViewerRef={registerFindViewerRef}
+            onFindWordRequest={onFindWordRequest}
           />
         </div>
       ))}
@@ -138,6 +155,9 @@ export const WalkthroughStream = memo(function WalkthroughStream({
   renderSideBySide,
   wrapLines,
   summary,
+  uncoveredOpenRequest = 0,
+  registerFindViewerRef,
+  onFindWordRequest,
 }: WalkthroughStreamProps) {
   const { t } = useI18n();
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -149,6 +169,12 @@ export const WalkthroughStream = memo(function WalkthroughStream({
   // sidebar showing step 5 while the stream shows step 6.
   const navigatingRef = useRef<string | null>(null);
   const releaseJumpRef = useRef<(() => void) | null>(null);
+
+  // A find match in the uncovered tail has to open it first: its runs are not
+  // mounted while collapsed, so there would be no viewer to scroll inside.
+  useEffect(() => {
+    if (uncoveredOpenRequest > 0) setUncoveredOpen(true);
+  }, [uncoveredOpenRequest]);
 
   useEffect(() => () => releaseJumpRef.current?.(), []);
 
@@ -252,9 +278,12 @@ export const WalkthroughStream = memo(function WalkthroughStream({
           <StopHeader stopView={stopView} />
           {stopView.hunks.length > 0 ? (
             <HunkRuns
+              stopId={stopView.stop.id}
               hunks={stopView.hunks}
               renderSideBySide={renderSideBySide}
               wrapLines={wrapLines}
+              registerFindViewerRef={registerFindViewerRef}
+              onFindWordRequest={onFindWordRequest}
             />
           ) : (
             <p className="typography-meta px-4 pb-4 text-muted-foreground">
@@ -292,6 +321,9 @@ export const WalkthroughStream = memo(function WalkthroughStream({
                   hunks={run.hunks}
                   renderSideBySide={renderSideBySide}
                   wrapLines={wrapLines}
+                  runKey={findRunKey(UNCOVERED_STOP_ID, index, run.hunks)}
+                  registerFindViewerRef={registerFindViewerRef}
+                  onFindWordRequest={onFindWordRequest}
                 />
               </div>
             ))}

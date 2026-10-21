@@ -239,7 +239,6 @@ type ChatViewportProps = {
     turnIds: string[];
     activeTurnId: string | null;
     onSelectTurn: (turnId: string) => void;
-    promptRailEnabled: boolean;
     showPromptNavigator: boolean;
     canLoadEarlierPrompts: boolean;
     isLoadingOlderPrompts: boolean;
@@ -277,7 +276,6 @@ const ChatViewport = React.memo(({
     turnIds,
     activeTurnId,
     onSelectTurn,
-    promptRailEnabled,
     showPromptNavigator,
     canLoadEarlierPrompts,
     isLoadingOlderPrompts,
@@ -542,11 +540,6 @@ const ChatViewport = React.memo(({
             )}
             ref={timelineRootRef}
             aria-hidden={isDesktopExpandedInput}
-            // The message column keeps clear of the prompt rail (typography.css).
-            // The room is reserved whenever the rail is enabled, before the
-            // rail itself appears with the second prompt, so its arrival does
-            // not shift the centered column sideways.
-            data-prompt-rail={promptRailEnabled ? '' : undefined}
         >
             <div className="absolute inset-0">
                 <MessageList
@@ -628,7 +621,6 @@ const ChatViewport = React.memo(({
         && prev.turnIds === next.turnIds
         && prev.activeTurnId === next.activeTurnId
         && prev.onSelectTurn === next.onSelectTurn
-        && prev.promptRailEnabled === next.promptRailEnabled
         && prev.showPromptNavigator === next.showPromptNavigator
         && prev.canLoadEarlierPrompts === next.canLoadEarlierPrompts
         && prev.isLoadingOlderPrompts === next.isLoadingOlderPrompts
@@ -923,6 +915,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
         () => (pinned ? { expanded: pinnedExpandedInput, setExpanded: setPinnedExpandedInput } : null),
         [pinned, pinnedExpandedInput],
     );
+    const stickyUserHeader = useUIStore((state) => state.stickyUserHeader);
     const promptNavigatorEnabled = useUIStore((state) => state.promptNavigatorEnabled);
     const allowPromptingSubagentSessions = useUIStore((state) => state.allowPromptingSubagentSessions);
     // The timeline dialog of the main chat is app state (a global shortcut
@@ -1602,6 +1595,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
     const scrollNodeRef = React.useMemo(() => ({ current: scrollNode }), [scrollNode]);
     useScrollShadow(scrollNodeRef, {
         observeMutations: false,
+        hideTopShadow: isMobile && stickyUserHeader,
         // The glass composer is the visible end of the transcript.
         hideBottomShadow: floatingComposer,
     });
@@ -1770,7 +1764,6 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
                 turnIds={timelineController.turnIds}
                 activeTurnId={timelineController.activeTurnId}
                 onSelectTurn={handlePromptNavigatorSelect}
-                promptRailEnabled={promptRailEnabled}
                 showPromptNavigator={showPromptNavigator}
                 canLoadEarlierPrompts={canLoadEarlierPrompts}
                 isLoadingOlderPrompts={timelineController.isLoadingOlder}
@@ -1809,6 +1802,11 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
 			// transcript fades out above the composer (index.css). Once the
 			// reader leaves the end, the rows slide under its glass again.
 			data-live-tail={sessionStatusForCurrent.type === 'busy' && isFollowingProgrammatically ? 'true' : undefined}
+			// The transcript and the composer keep clear of the prompt rail
+			// together (typography.css). The room is reserved whenever the
+			// rail is enabled, before the rail itself appears with the second
+			// prompt, so its arrival does not shift anything sideways.
+			data-prompt-rail={promptRailEnabled && !draftLayoutVisible ? '' : undefined}
 			className="relative flex min-w-0 flex-1 flex-col h-full bg-background"
 		>
 			{returnToParentButton}

@@ -107,6 +107,8 @@ const MessagesTab: React.FC = () => {
   const setPromptNavigatorEnabled = useUIStore((state) => state.setPromptNavigatorEnabled);
   const collapsibleUserMessages = useUIStore((state) => state.collapsibleUserMessages);
   const setCollapsibleUserMessages = useUIStore((state) => state.setCollapsibleUserMessages);
+  const stickyUserHeader = useUIStore((state) => state.stickyUserHeader);
+  const setStickyUserHeader = useUIStore((state) => state.setStickyUserHeader);
   const showSplitAssistantMessageActions = useUIStore((state) => state.showSplitAssistantMessageActions);
   const setShowSplitAssistantMessageActions = useUIStore((state) => state.setShowSplitAssistantMessageActions);
   const userMessageRenderingMode = useUIStore((state) => state.userMessageRenderingMode);
@@ -227,6 +229,16 @@ const MessagesTab: React.FC = () => {
           label={t('settings.openchamber.visual.field.collapsibleUserMessages')}
           ariaLabel={t('settings.openchamber.visual.field.collapsibleUserMessagesAria')}
           settingsItem="chat.collapsible-user-messages"
+        />
+        <SettingsCheckboxRow
+          checked={stickyUserHeader}
+          onChange={(enabled) => {
+            setStickyUserHeader(enabled);
+            void updateDesktopSettings({ stickyUserHeader: enabled });
+          }}
+          label={t('settings.openchamber.visual.field.stickyUserHeader')}
+          ariaLabel={t('settings.openchamber.visual.field.stickyUserHeaderAria')}
+          settingsItem="chat.sticky-user-header"
         />
         <SettingsCheckboxRow
           checked={promptNavigatorEnabled}

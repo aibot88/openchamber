@@ -22,6 +22,7 @@ import { providersI18n } from './providers.i18n';
 import { mcpGridI18n } from './mcp-grid.i18n';
 import { pluginsGridI18n } from './plugins-grid.i18n';
 import { integrationsCatalogI18n } from './integrations-catalog.i18n';
+import { diffFindI18n } from './diff-find.i18n';
 
 export const dict: Record<I18nKey, string> = {
   "opencodeCompatibility.bundled": "OpenCode входить до складу OpenChamber. Оновіть OpenChamber, щоб отримати OpenCode v2.",
@@ -163,6 +164,7 @@ export const dict: Record<I18nKey, string> = {
   ...mcpGridI18n.uk,
   ...pluginsGridI18n.uk,
   ...integrationsCatalogI18n['uk'],
+  ...diffFindI18n['uk'],
   'terminalView.actions.attachSelection': 'Прикріпити вибраний вивід',
   'terminalView.actions.copySelection': 'Скопіювати вибраний вивід',
   'terminalView.toast.selectionCopied': 'Вивід скопійовано',
@@ -2265,6 +2267,9 @@ export const dict: Record<I18nKey, string> = {
   "session.newWorktree.toast.worktreeCreatedDescription": "{target} - завантаження у фоні",
   "session.newWorktree.toast.fetchSourceFailed": "Не вдалося отримати з віддаленого — створено з локального стану",
   "session.newWorktree.toast.fetchSourceAccess": "Не вдалося отримати: доступ до цього репо потребує уваги в «Налаштувати репозиторій». Створено з локального стану.",
+  "session.newWorktree.toast.startFolderMissing": "У цьому worktree немає теки «{folder}», тому OpenCode запустився в корені worktree.",
+  "session.newWorktree.toast.startFolderUnverified": "Не вдалося перевірити теку «{folder}», тому OpenCode запустився в корені worktree.",
+  "session.newWorktree.toast.startFolderUnknown": "Не вдалося визначити, яку теку репозиторію відкриває цей проєкт, тому OpenCode запустився в корені worktree.",
   "session.newWorktree.toast.branchBackup": "Гілка {branch} тепер збігається з віддаленою. Її попередні коміти збережено в {backup}.",
   "session.githubIntegration.tabs.pullRequests": "PR",
   "session.githubIntegration.validation.branchAlreadyCheckedOut": "Гілку вже відкрито в worktree",
@@ -2398,6 +2403,7 @@ export const dict: Record<I18nKey, string> = {
   "chat.queuedMessage.edit": "edit",
   "chat.queuedMessage.send": "send",
   "chat.queuedMessage.removeAria": "Видалити з черги",
+  "chat.queuedMessage.goal": "Почне ціль, коли буде надіслано",
   "chat.queuedMessage.reorderAria": "Перетягніть, щоб змінити порядок",
   "chat.queuedMessage.toast.queueFailed": "Не вдалося додати повідомлення в чергу. Воно повернулося в поле вводу.",
   "chat.queuedMessage.toast.takeFailed": "Не вдалося завантажити повідомлення з черги. Спробуйте ще раз.",
@@ -2706,6 +2712,7 @@ export const dict: Record<I18nKey, string> = {
   "chat.modelControls.clearSearch": "Очистити пошук",
   "chat.modelControls.current": "поточний",
   "chat.modelControls.thinking": "Мислення",
+  "chat.modelControls.inheritedVariantTooltip": "Мислення: {variant}, типовий рівень цієї моделі",
   "chat.modelControls.default": "За замовчуванням",
   "chat.modelControls.selectAgent": "Вибрати агента",
   "chat.modelControls.costPerMillion": "Вартість ($/1 млн токенів)",

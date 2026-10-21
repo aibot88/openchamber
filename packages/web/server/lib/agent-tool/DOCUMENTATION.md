@@ -83,15 +83,29 @@ both settings are `false`.
   `action`, because models produce both shapes; an explicit `parameters` object
   wins on a conflict. Rejecting the flattened shape turned a call that plainly
   carried a `url` into "url is required", which reads as a broken tool rather
-  than a malformed call.
+  than a malformed call. The schema declares the inputs only inside
+  `parameters`, and `additionalProperties: true` at the root lets flattened
+  inputs and unknown fields (a stale `wait` or `timeout`) through to the
+  adapter.
+
+### Why the inputs are declared once and not beside `action` too
+
+Copying every input to the schema root would let the descriptions reach a
+model that fills in the flattened shape, but outside Code Mode the schema
+ships with every request: the copy costs about 8.7k characters per turn when
+all tools are on, and the flattened calls already work through
+`additionalProperties`.
 
 ## Runtime flow
 
 1. The OpenChamber HTTP listener binds and publishes its authoritative port.
 2. `materializePlugin()` writes the plugin under
-   `<openchamber-data-dir>/agent-tool/` and returns its directory; the managed
-   config layer lists that directory in `<data-dir>/opencode.managed.json` and
-   rewrites the file whenever a tool setting changes.
+   `<instance-dir>/agent-tool/` and returns its directory; the managed
+   config layer lists that directory in `<instance-dir>/opencode.managed.json` and
+   rewrites the file whenever a tool setting changes. `<instance-dir>` is
+   `<data-dir>/run/instances/<server-pid>/` (`../opencode/instance-dir.js`):
+   the plugin carries this server's tool declarations, so a second server on
+   the same data dir must not overwrite it (#4470).
 3. `createChildEnv()` adds a random per-child token and the callback URL to the
    managed OpenCode child environment. They are present even while every tool
    is off, so a tool switched on later can call back without a restart. The URL
@@ -131,11 +145,22 @@ both settings are `false`.
   `lastAssistant` on a dispatch with a usage error naming `returnResult`
   (`agentOnlyUsageError`). `session.messages` does not wait either: it reads
   what is there. The control service keeps `wait` for the CLI only.
-- Boolean inputs are checked at the tool boundary: the plugin forwards raw
-  JSON, so a field declared `type: 'boolean'` in any tool's schema that
-  arrives as anything else (the string `"true"`) fails the call with a usage
-  error naming the field (`nonBooleanParameterError`), before any action runs.
-  Downstream `=== true` checks would otherwise read it as false.
+- Boolean inputs cross two checks. The generated adapter normalizes exactly
+  the strings `"true"` and `"false"` for the fields the calling tool's own
+  parameter schema declares `type: 'boolean'` (derived from that schema at
+  generation time), because a harness can stringify a boolean on the way and
+  every downstream `=== true` would read it as false. Every other value keeps
+  its identity, and the server check still refuses it: the plugin forwards raw
+  JSON, so a field declared `type: 'boolean'` in any tool's schema that arrives
+  as anything else fails the call with a usage error naming the field
+  (`nonBooleanParameterError`), before any action runs. A callback that
+  bypasses the adapter is refused the same way, so the strictness never depends
+  on the plugin having normalized first.
+- `parameters.link` for `session.link` can arrive as a JSON string even though
+  the schema declares an object (#4591). The generated entry parses it once
+  before the merge and keeps the result only when it is a plain object;
+  anything else reaches `linkInputSchema` unchanged. No other field is
+  revived, so prompts and titles that happen to look like JSON stay text.
 - The description draws the line against OpenCode's own `subagent` tool:
   `subagent` when the agent delegates part of its own task and wants the
   answer for itself, `session.*` when the user asks for a separate session

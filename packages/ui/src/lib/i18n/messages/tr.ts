@@ -21,6 +21,7 @@ import { providersI18n } from './providers.i18n';
 import { mcpGridI18n } from './mcp-grid.i18n';
 import { pluginsGridI18n } from './plugins-grid.i18n';
 import { integrationsCatalogI18n } from './integrations-catalog.i18n';
+import { diffFindI18n } from './diff-find.i18n';
 
 export const dict = {
   "opencodeCompatibility.bundled": "OpenCode, OpenChamber ile birlikte gelir. OpenCode v2 için OpenChamber’ı güncelleyin.",
@@ -91,6 +92,7 @@ export const dict = {
   ...mcpGridI18n.tr,
   ...pluginsGridI18n.tr,
   ...integrationsCatalogI18n['tr'],
+  ...diffFindI18n['tr'],
   'terminalView.actions.attachSelection': 'Seçili çıktıyı ekle',
   'terminalView.actions.copySelection': 'Seçili çıktıyı kopyala',
   'terminalView.toast.selectionCopied': 'Çıktı kopyalandı',
@@ -2157,6 +2159,9 @@ export const dict = {
   'session.newWorktree.toast.worktreeCreatedDescription': '{target} - arka planda hazırlanıyor',
   'session.newWorktree.toast.fetchSourceFailed': 'Uzak depodan fetch edilemedi — yerel durumdan oluşturuldu',
   'session.newWorktree.toast.fetchSourceAccess': 'Fetch yapılamadı: bu deponun erişimi Repository\'yi yapılandır bölümünde ilgi bekliyor. Yerel durumdan oluşturuldu.',
+  'session.newWorktree.toast.startFolderMissing': 'Bu worktree\'de "{folder}" klasörü yok, bu yüzden OpenCode worktree kök dizininde başladı.',
+  'session.newWorktree.toast.startFolderUnverified': '"{folder}" klasörü denetlenemedi, bu yüzden OpenCode worktree kök dizininde başladı.',
+  'session.newWorktree.toast.startFolderUnknown': 'Bu projenin deponun hangi klasörünü açtığı belirlenemedi, bu yüzden OpenCode worktree kök dizininde başladı.',
   'session.newWorktree.toast.branchBackup': '{branch} artık uzak dalla aynı. Önceki commit\'leri {backup} dalında saklandı.',
   'session.githubIntegration.tabs.pullRequests': 'Pull Request\'ler',
   'session.githubIntegration.validation.branchAlreadyCheckedOut': 'Branch zaten bir worktree\'de checkout edilmiş',
@@ -2288,6 +2293,7 @@ export const dict = {
   'chat.queuedMessage.edit': 'düzenle',
   'chat.queuedMessage.send': 'gönder',
   'chat.queuedMessage.removeAria': 'Kuyruktan kaldır',
+  'chat.queuedMessage.goal': 'Gönderildiğinde bir hedef başlatır',
   'chat.queuedMessage.reorderAria': 'Yeniden sıralamak için sürükle',
   'chat.queuedMessage.toast.queueFailed': 'Mesaj kuyruğa eklenemedi. Yazma alanına geri kondu.',
   'chat.queuedMessage.toast.takeFailed': 'Kuyruktaki mesaj yüklenemedi. Lütfen tekrar deneyin.',
@@ -2580,6 +2586,7 @@ export const dict = {
   'chat.modelControls.clearSearch': 'Aramayı temizle',
   'chat.modelControls.current': 'Mevcut',
   'chat.modelControls.thinking': 'Düşünme',
+  'chat.modelControls.inheritedVariantTooltip': 'Düşünme: {variant}, bu modelin varsayılanı',
   'chat.modelControls.default': 'Varsayılan',
   'chat.modelControls.selectAgent': 'Agent seç',
   'chat.modelControls.costPerMillion': 'Maliyet ($/1M token)',

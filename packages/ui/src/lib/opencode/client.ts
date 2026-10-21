@@ -60,6 +60,8 @@ import {
   type Session,
   type SessionStatus,
   type Skill,
+  type SyntheticMessage,
+  type UserMessage,
   type Vcs,
   toModelRef,
 } from "./model"
@@ -71,6 +73,7 @@ import {
   deniesAnyProvider,
   mergeConfigDocuments,
   projectAgent,
+  projectInboxMessage,
   projectMessages,
   projectProject,
   projectSession,
@@ -173,9 +176,9 @@ const validateRuntimeResponse = (response: Response): Response => {
 
 /**
  * Turns whatever the generated client threw into an `OpencodeApiError` with a
- * status the rest of the app can branch on. Transport failures keep their
- * relay "outcome unknown" marker so a lost response is not mistaken for a
- * request that never left.
+ * status the rest of the app can branch on. A transport failure is marked
+ * "outcome unknown" so a lost response is not mistaken for a request that never
+ * left; a routing failure proves the opposite and stays definite.
  */
 export function normalizeOpencodeError(operation: string, error: unknown): OpencodeApiError {
   if (error instanceof OpencodeApiError) return error
@@ -197,9 +200,12 @@ export function normalizeOpencodeError(operation: string, error: unknown): Openc
     const wrapped = new OpencodeApiError(operation, error.reason === "Transport" ? "transport failure" : error.reason, {
       cause: error.cause ?? error,
     })
-    if (error.reason === "Transport" && isAmbiguousTransportFailure(error.cause)) {
-      markAmbiguousTransportFailure(wrapped)
-    }
+    // A `Transport` reason means the request was handed to fetch and the
+    // response (or the connection carrying it) was lost. The outcome is
+    // therefore unknown: the server may already be running it. Only a routing
+    // failure proves the request never reached the API, and that is marked
+    // definite above.
+    if (error.reason === "Transport") markAmbiguousTransportFailure(wrapped)
     return wrapped
   }
   const tagged = taggedErrorSchema.safeParse(error)
@@ -442,6 +448,16 @@ type DirectorySwitchResult = {
 export type MessagePage = {
   items: Array<{ info: Message; parts: Part[] }>
   cursor: { previous?: string; next?: string }
+}
+
+/**
+ * A message a session's pending OpenCode inbox item stands for, projected the
+ * way `session.inbox.enqueued` paints it live. Control items (compaction,
+ * move) paint nothing and are left out.
+ */
+export type PendingInboxMessage = {
+  info: UserMessage | SyntheticMessage
+  parts: Part[] | null
 }
 
 export type SessionPage = {
@@ -1112,6 +1128,26 @@ class OpencodeService {
       items,
       cursor: pageCursor({ ...response.cursor, next: lastPage ? undefined : response.cursor.next }),
     }
+  }
+
+  /**
+   * Pending items of one session's OpenCode inbox.
+   *
+   * A prompt steered into a running turn is not part of the message history
+   * until OpenCode admits it, so a client that starts (or restarts) while the
+   * session is busy has to read the inbox to paint those messages again.
+   */
+  async getSessionInbox(
+    id: string,
+    directory?: string | null,
+  ): Promise<readonly PendingInboxMessage[]> {
+    const items = await call("session.inbox.list", () =>
+      this.clientFor(directory).session.inbox.list({ sessionID: id }),
+    )
+    return items.flatMap((item) => {
+      const projected = projectInboxMessage(item, { sessionID: id, messageID: item.id, created: item.time.created })
+      return projected ? [projected] : []
+    })
   }
 
   /**

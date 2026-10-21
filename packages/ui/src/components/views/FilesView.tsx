@@ -4312,37 +4312,41 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full', visible = t
       }
     }
 
-    secondaryActions.push({
-      id: 'open-in-app',
-      label: t('filesView.editor.openInDesktopApp'),
-      icon: <Icon name="file-transfer" className="size-4" />,
-      submenu: openInAppMenuItems,
-      button: (
-        <DropdownMenu onOpenChange={handleToolbarDropdownOpenChange}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="inline-flex">
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="size-6 p-0 text-foreground opacity-100 hover:bg-transparent focus-visible:bg-transparent active:bg-transparent"
-                    title={t('filesView.editor.openInDesktopApp')}
-                    aria-label={t('filesView.editor.openInDesktopApp')}
-                  >
-                    <Icon name="file-transfer" className="size-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" sideOffset={6}>{t('filesView.editor.openInDesktopApp')}</TooltipContent>
-          </Tooltip>
-          <DropdownMenuContent align="end" className="w-56 max-h-[70vh] overflow-y-auto">
-            {openInAppMenuItems}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-    });
+    // Every item hands the path to this machine's OS. A remote server, WSL
+    // included, keeps its files elsewhere, so the menu would only fail there.
+    if (isDesktopLocalOriginActive()) {
+      secondaryActions.push({
+        id: 'open-in-app',
+        label: t('filesView.editor.openInDesktopApp'),
+        icon: <Icon name="file-transfer" className="size-4" />,
+        submenu: openInAppMenuItems,
+        button: (
+          <DropdownMenu onOpenChange={handleToolbarDropdownOpenChange}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex">
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="size-6 p-0 text-foreground opacity-100 hover:bg-transparent focus-visible:bg-transparent active:bg-transparent"
+                      title={t('filesView.editor.openInDesktopApp')}
+                      aria-label={t('filesView.editor.openInDesktopApp')}
+                    >
+                      <Icon name="file-transfer" className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" sideOffset={6}>{t('filesView.editor.openInDesktopApp')}</TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="end" className="w-56 max-h-[70vh] overflow-y-auto">
+              {openInAppMenuItems}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ),
+      });
+    }
 
     if (isMarkdown && getMdViewMode() === 'preview' && showMessageTTSButtons) {
       const ttsLabel = isTTSPlaying ? t('filesView.tts.stopSpeaking') : t('filesView.tts.readAloud');
@@ -5528,7 +5532,9 @@ export const FilesView: React.FC<FilesViewProps> = ({ mode = 'full', visible = t
   );
 
   return (
-    <div className="flex h-full min-h-0 overflow-hidden bg-background relative">
+    // Marks Files as a surface with its own Cmd/Ctrl+F, so Changes and the
+    // walkthrough leave the key alone while focus is in here.
+    <div data-find-surface="" className="flex h-full min-h-0 overflow-hidden bg-background relative">
       <Dialogs
         activeDialog={activeDialog}
         dialogData={dialogData}

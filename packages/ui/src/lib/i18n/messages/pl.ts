@@ -22,6 +22,7 @@ import { providersI18n } from './providers.i18n';
 import { mcpGridI18n } from './mcp-grid.i18n';
 import { pluginsGridI18n } from './plugins-grid.i18n';
 import { integrationsCatalogI18n } from './integrations-catalog.i18n';
+import { diffFindI18n } from './diff-find.i18n';
 
 export const dict: Record<I18nKey, string> = {
   "opencodeCompatibility.bundled": "OpenCode jest dołączony do OpenChamber. Zaktualizuj OpenChamber, aby uzyskać OpenCode v2.",
@@ -153,6 +154,7 @@ export const dict: Record<I18nKey, string> = {
   ...mcpGridI18n.pl,
   ...pluginsGridI18n.pl,
   ...integrationsCatalogI18n['pl'],
+  ...diffFindI18n['pl'],
   'terminalView.actions.attachSelection': 'Dołącz zaznaczone dane wyjściowe',
   'terminalView.actions.copySelection': 'Kopiuj zaznaczone dane wyjściowe',
   'terminalView.toast.selectionCopied': 'Skopiowano dane wyjściowe',
@@ -1031,6 +1033,7 @@ export const dict: Record<I18nKey, string> = {
   'chat.queuedMessage.edit': 'edit',
   'chat.queuedMessage.send': 'send',
   'chat.queuedMessage.removeAria': 'Usuń z kolejki',
+  'chat.queuedMessage.goal': 'Rozpoczyna cel po wysłaniu',
   'chat.queuedMessage.reorderAria': 'Przeciągnij, aby zmienić kolejność',
   'chat.queuedMessage.toast.queueFailed': 'Nie udało się dodać wiadomości do kolejki. Wróciła do pola wpisywania.',
   'chat.queuedMessage.toast.takeFailed': 'Nie udało się wczytać wiadomości z kolejki. Spróbuj ponownie.',
@@ -1541,6 +1544,7 @@ export const dict: Record<I18nKey, string> = {
   'chat.modelControls.showThinkingModes': 'Pokaż tryby myślenia',
   'chat.modelControls.temperature': 'Temperatura',
   'chat.modelControls.thinking': 'Myślenie',
+  'chat.modelControls.inheritedVariantTooltip': 'Myślenie: {variant}, domyślne dla tego modelu',
   'chat.modelControls.topP': 'Top P',
   'chat.modelControls.unfavoriteAria': 'Usuń z ulubionych',
   'chat.modelControls.webFetch': 'WebFetch',
@@ -3179,6 +3183,9 @@ export const dict: Record<I18nKey, string> = {
   'session.newWorktree.toast.worktreeCreatedDescription': '{target} — inicjalizacja w tle',
   'session.newWorktree.toast.fetchSourceFailed': 'Nie udało się pobrać ze zdalnego — utworzono na podstawie stanu lokalnego',
   'session.newWorktree.toast.fetchSourceAccess': 'Nie udało się pobrać: dostęp do tego repozytorium wymaga uwagi w „Skonfiguruj repozytorium”. Utworzono na podstawie stanu lokalnego.',
+  'session.newWorktree.toast.startFolderMissing': 'Ten worktree nie ma folderu „{folder}”, więc OpenCode wystartował w katalogu głównym worktree.',
+  'session.newWorktree.toast.startFolderUnverified': 'Nie udało się sprawdzić folderu „{folder}”, więc OpenCode wystartował w katalogu głównym worktree.',
+  'session.newWorktree.toast.startFolderUnknown': 'Nie udało się ustalić, który folder repozytorium otwiera ten projekt, więc OpenCode wystartował w katalogu głównym worktree.',
   'session.newWorktree.toast.branchBackup': 'Gałąź {branch} odpowiada teraz zdalnej. Jej poprzednie commity zachowano w {backup}.',
   'session.newWorktree.worktreeDirectory': 'Katalog drzewa pracy',
   'session.newWorktree.worktreeDirectoryPlaceholder': 'my-worktree-directory',

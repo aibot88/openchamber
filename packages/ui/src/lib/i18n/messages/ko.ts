@@ -22,6 +22,7 @@ import { providersI18n } from './providers.i18n';
 import { mcpGridI18n } from './mcp-grid.i18n';
 import { pluginsGridI18n } from './plugins-grid.i18n';
 import { integrationsCatalogI18n } from './integrations-catalog.i18n';
+import { diffFindI18n } from './diff-find.i18n';
 
 export const dict: Record<I18nKey, string> = {
   "opencodeCompatibility.bundled": "OpenCode는 OpenChamber에 포함되어 있습니다. OpenCode v2를 사용하려면 OpenChamber를 업데이트하세요.",
@@ -153,6 +154,7 @@ export const dict: Record<I18nKey, string> = {
   ...mcpGridI18n.ko,
   ...pluginsGridI18n.ko,
   ...integrationsCatalogI18n['ko'],
+  ...diffFindI18n['ko'],
   'terminalView.actions.attachSelection': '선택한 출력 첨부',
   'terminalView.actions.copySelection': '선택한 출력 복사',
   'terminalView.toast.selectionCopied': '출력을 복사했습니다',
@@ -2299,6 +2301,9 @@ export const dict: Record<I18nKey, string> = {
   'session.newWorktree.toast.worktreeCreatedDescription': '{target} - 백그라운드에서 초기 설정 중',
   'session.newWorktree.toast.fetchSourceFailed': '원격에서 가져오지 못했습니다. 로컬 상태로 생성했습니다',
   'session.newWorktree.toast.fetchSourceAccess': '가져오지 못했습니다: 이 저장소의 접근 권한을 저장소 구성에서 확인해야 합니다. 로컬 상태로 생성했습니다.',
+  'session.newWorktree.toast.startFolderMissing': '이 worktree에는 "{folder}" 폴더가 없어 OpenCode가 worktree 루트에서 시작되었습니다.',
+  'session.newWorktree.toast.startFolderUnverified': '"{folder}" 폴더를 확인하지 못해 OpenCode가 worktree 루트에서 시작되었습니다.',
+  'session.newWorktree.toast.startFolderUnknown': '이 프로젝트가 저장소의 어느 폴더를 여는지 확인하지 못해 OpenCode가 worktree 루트에서 시작되었습니다.',
   'session.newWorktree.toast.branchBackup': '{branch}을(를) 원격과 맞췄습니다. 이전 커밋은 {backup}에 보관했습니다.',
   'session.githubIntegration.tabs.pullRequests': 'PR',
   'session.githubIntegration.validation.branchAlreadyCheckedOut': '브랜치가 이미 워크트리에 체크아웃되어 있습니다',
@@ -2432,6 +2437,7 @@ export const dict: Record<I18nKey, string> = {
   'chat.queuedMessage.edit': 'edit',
   'chat.queuedMessage.send': 'send',
   'chat.queuedMessage.removeAria': '큐에서 제거',
+  'chat.queuedMessage.goal': '보낼 때 목표 시작',
   'chat.queuedMessage.reorderAria': '드래그하여 순서 변경',
   'chat.queuedMessage.toast.queueFailed': '메시지를 대기열에 추가하지 못했습니다. 입력창으로 되돌렸습니다.',
   'chat.queuedMessage.toast.takeFailed': '대기열의 메시지를 불러오지 못했습니다. 다시 시도해 주세요.',
@@ -2752,6 +2758,7 @@ export const dict: Record<I18nKey, string> = {
   'chat.modelControls.clearSearch': '검색 지우기',
   'chat.modelControls.current': '현재',
   'chat.modelControls.thinking': '추론',
+  'chat.modelControls.inheritedVariantTooltip': '추론: {variant}, 이 모델의 기본값',
   'chat.modelControls.default': '기본값',
   'chat.modelControls.selectAgent': '에이전트 선택',
   'chat.modelControls.costPerMillion': '비용 ($/1M 토큰)',

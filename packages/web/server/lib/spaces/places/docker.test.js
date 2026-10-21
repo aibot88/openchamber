@@ -43,7 +43,7 @@ const toolsResource = ({ owner = OWNER, key = KEY, filled = true, labels = tools
  * Seeds for a complete space, as the fake docker stores them. It runs on `tools`, its server has
  * a token, and its gatekeeper runs whenever it does.
  */
-const spaceResources = ({ id = ID, owner = OWNER, running = true, tools = `openchamber-tools-${owner}-${KEY}` } = {}) => {
+const spaceResources = ({ id = ID, owner = OWNER, running = true, tools = `openchamber-tools-${owner}-${KEY}`, env = undefined } = {}) => {
   const prefix = `openchamber-space-${id}-`;
   const mounts = [
     { volume: `${prefix}volume-work`, destination: `/spaces/${id}` },
@@ -67,7 +67,7 @@ const spaceResources = ({ id = ID, owner = OWNER, running = true, tools = `openc
     {
       kind: 'container',
       name: `${prefix}space`,
-      entry: hardenedContainerEntry({ name: `${prefix}space`, labels: labelsFor('space', { id, owner }), network: `${prefix}network`, mounts, running }),
+      entry: hardenedContainerEntry({ name: `${prefix}space`, labels: labelsFor('space', { id, owner }), network: `${prefix}network`, mounts, running, env }),
     },
     { kind: 'volume', name: `${prefix}volume-work`, entry: { Name: `${prefix}volume-work`, Labels: labelsFor('volume', { id, owner }) } },
     { kind: 'volume', name: `${prefix}volume-home`, entry: { Name: `${prefix}volume-home`, Labels: labelsFor('volume', { id, owner }) }, token: 'seeded-token' },
@@ -250,6 +250,17 @@ describe('docker place: create', () => {
     ]);
     expect(Object.keys(SPACE_ENVIRONMENT)).not.toContain('OPENCHAMBER_UI_PASSWORD');
     expect(SPACE_SERVER_COMMAND.join(' ')).not.toMatch(/\n/);
+  });
+
+  it('gives the space container OpenCode\'s start configuration when there is one, and it verifies clean', async () => {
+    const startConfig = JSON.stringify({ providers: { 'ollama-local': { settings: { baseURL: 'http://gatekeeper:8080/model/ollama-local', apiKey: 'space-window' } } } });
+    const fake = createFakeDocker({ resources: [toolsResource()] });
+    const place = makePlace(fake);
+    await place.create(SPEC, { startConfig });
+
+    const spaceCreate = fake.calls.map((call) => call.args).find((args) => args[0] === 'create' && !args.includes('--network-alias'));
+    expect(spaceCreate.slice(spaceCreate.indexOf(SPACE_BASE_IMAGE) - 2, spaceCreate.indexOf(SPACE_BASE_IMAGE))).toEqual(['--env', `OPENCODE_CONFIG_CONTENT=${startConfig}`]);
+    expect(await place.verify(ID)).toEqual([]);
   });
 
   it('creates the gatekeeper with the hardening of a space, no mount, and a limit of its own', async () => {
@@ -1423,6 +1434,17 @@ describe('docker place: new tools at the next start', () => {
     ]);
     const create = fake.calls.map((call) => call.args).find((args) => args[0] === 'create');
     expect(create[create.indexOf('--memory') + 1]).toBe('4294967296');
+  });
+
+  it('keeps OpenCode\'s start configuration of the old container in the new one', async () => {
+    const startConfig = JSON.stringify({ providers: { 'ollama-local': { settings: { baseURL: 'http://gatekeeper:8080/model/ollama-local', apiKey: 'space-window' } } } });
+    const fake = createFakeDocker({ resources: [toolsResource({ key: OLD_KEY }), ...spaceResources({ running: false, tools: OLD_TOOLS, env: ['HOME=/home/space', `OPENCODE_CONFIG_CONTENT=${startConfig}`] })] });
+    const place = makePlace(fake);
+    await place.start(ID);
+
+    const create = fake.calls.map((call) => call.args).find((args) => args[0] === 'create');
+    expect(create).toContain(`OPENCODE_CONFIG_CONTENT=${startConfig}`);
+    expect(await place.verify(ID)).toEqual([]);
   });
 
   it('puts the old container back when the start of the new one fails', async () => {

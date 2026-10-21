@@ -152,6 +152,7 @@ import { createDevServerScanner } from './lib/dev-servers/routes.js';
 import { createDevTunnelRuntime } from './lib/dev-tunnel/runtime.js';
 import { registerBrowserControlRoutes } from './lib/browser-control/routes.js';
 import { createManagedConfigRuntime } from './lib/opencode/managed-config-file.js';
+import { prepareInstanceDir } from './lib/opencode/instance-dir.js';
 import { createOpenChamberSessionService } from './lib/openchamber-sessions/routes.js';
 import { createSessionMetadataStore, createOpenCodeSessionMetadata } from './lib/openchamber-sessions/session-metadata-store.js';
 import { createOpenCodeClient } from './lib/openchamber-sessions/opencode-client.js';
@@ -1127,6 +1128,8 @@ const messageQueueRuntime = createMessageQueueRuntime({
   // shared control stream for SSE clients and the existing WS fan-out.
   broadcastGlobalUiEvent: broadcastOpenChamberUiEvent,
   resolveAutoSelection: (send) => routingRuntime.resolveAutoSelection(send),
+  persistSessionGoal: (sessionID, directory, goal) =>
+    persistSessionMetadataPatch(sessionID, { openchamber: { goal } }, { directory }),
   onPromptSent: (sessionId) => sessionRuntime.markUserMessageSent(sessionId),
   beforeScheduledTaskSend: (...args) => scheduledTasksRuntime.beforeScheduledTaskSend(...args),
   validateScheduledTaskTarget: (...args) => scheduledTasksRuntime.validateTarget(...args),
@@ -1708,6 +1711,7 @@ const openChamberSessionService = createOpenChamberSessionService({
   dataDir: OPENCHAMBER_DATA_DIR,
   sessionMetadataStore,
   persistSessionMetadata: persistSessionMetadataPatch,
+  updateSessionMetadata: updateSessionMetadataWith,
   broadcastGlobalUiEvent: broadcastOpenChamberUiEvent,
   resolveAutoSelection: (input) => routingRuntime.resolveAutoSelection(input),
   isAutoReady: async () => (await routingRuntime.describe()).autoReady,
@@ -1986,11 +1990,12 @@ async function main(options = {}) {
     || (typeof process.env.OPENCHAMBER_HOST === 'string' && process.env.OPENCHAMBER_HOST.trim().length > 0
       ? process.env.OPENCHAMBER_HOST.trim()
       : '127.0.0.1');
+  const instanceDir = await prepareInstanceDir({ fsPromises, path, dataDir: OPENCHAMBER_DATA_DIR });
   agentToolRuntime = createAgentToolRuntime({
     crypto,
     fsPromises,
     path,
-    dataDir: OPENCHAMBER_DATA_DIR,
+    instanceDir,
     env: process.env,
     executeAction: (...args) => openChamberControlService.execute(...args),
     // A v2 tool call carries no directory, only the session it runs in.
@@ -2005,7 +2010,7 @@ async function main(options = {}) {
   managedConfigRuntime = createManagedConfigRuntime({
     fsPromises,
     path,
-    dataDir: OPENCHAMBER_DATA_DIR,
+    instanceDir,
     env: process.env,
     agentToolRuntime,
     readSettings: () => readSettingsFromDiskMigrated(),

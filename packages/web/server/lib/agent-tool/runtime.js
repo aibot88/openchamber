@@ -159,7 +159,7 @@ const KNOWLEDGE_PARAMETER_PROPERTIES = {
   id: { type: 'string', description: 'ID from list or from the save that created it; leave it out of save to create' },
   body: { type: 'string', description: 'Note text (at most 3000 characters), todo text (at most 1000) or the whole plan markdown (at most 200000)' },
   completed: { type: 'boolean', description: 'Todo state; false reopens it' },
-  expected: { type: 'string', description: 'The note text or plan file exactly as you last read it; replacing fails if it changed since' },
+  expected: { type: 'string', description: 'The note text or plan file exactly as you last read it; replacing fails if it changed since. On that failure refresh before retrying: knowledge.list gives a note\'s current body, and a plan\'s path to read again with your file tools; then retry the save with the same id and the fresh text as expected' },
 };
 
 // Its own names, not the shared map: `title` and `body` mean something else in
@@ -191,11 +191,11 @@ const CONTROL_TOOL_DESCRIPTION = "When the user gives you an issue or a change u
   + WORKTREE_MOVE_INTRO
   + "The tool also runs OpenChamber projects, sessions and scheduled tasks for the user. A session you create, send to or fork belongs to the user: they follow it in OpenChamber and talk to it themselves. Dispatch one when the user asks for it, even when the work relates to your current task; any agent, optionally in a new worktree. To delegate part of your own task and get the answer yourself, use the subagent tool instead. A dispatch returns at once. Set returnResult when the user wants the outcome back or your next step needs it: the session's final answer then arrives in this session as a message when it finishes, and you continue from there. Without it, the session is the user's to follow and you move on. To see how a session went, read it with session.messages (lastAssistant for the final answer); session.send always starts a new prompt. One action per call; scope with projectId or directory, or leave both out for this session's directory. Deleting sessions and worktrees is not available.";
 
-const WEB_TOOL_DESCRIPTION = "Look at and interact with a web page in OpenChamber's browser panel, so you can check your own work rather than describing what you expect. Use one action per call. Open a page, snapshot it to read its text and its interactive elements, then click, type or scroll using the selectors the snapshot returned; snapshots also report any errors the page logged. Pass a selector to browser.snapshot to read one part of a long page. browser.inspect returns computed styles when the question is how something renders. Set viewport to check a layout at mobile, tablet or desktop size. The page runs with the user's real logins, so treat what you see as their live session.";
+const WEB_TOOL_DESCRIPTION = "Look at and interact with a web page in OpenChamber's browser panel, so you can check your own work rather than describing what you expect. Use one action per call. Open a page, snapshot it to read its text and its interactive elements, then click, type or scroll using the selectors the snapshot returned; snapshots also report any errors the page logged. Pass a selector to browser.snapshot to read one part of a long page. browser.inspect returns computed styles when the question is how something renders. Set viewport to check a layout at mobile, tablet or desktop size. Close tabs you opened for your own work with browser.close when you are done with them. Leave open the ones you opened to show the user something. The page runs with the user's real logins, so treat what you see as their live session.";
 
 const MEMORY_TOOL_DESCRIPTION = "Keep what you learn across sessions, so the user does not have to explain the same thing twice. Use one action per call. The session already lists the titles of what is stored. A title is an abbreviation, not the memory: read the entry with memory.read once before acting on it (it then stays in your context; do not re-read it on later turns), because titles leave out the conditions and exceptions that decide how the memory applies, and the ones that look self-explanatory hide them most often. Save something only when it will still be true in a later session — a stable preference, a project convention, a decision and its reason, or a hard-won pointer. Before saving something about the project, ask: would an agent that reads the relevant code, docs and skills learn all of it, including why it is so and whether it may be changed? If yes, do not save it. Code shows what was done, not why, nor that it was deliberate: save the decision, its reason, a rejected alternative or a \"leave this as it is\", without retelling how the code works, because that retelling goes stale first. Corrections and preferences from the user are never in the code, so this check does not hold them back. Do not save one-off task state, secrets or credentials, or anything the user asked you not to keep; when the user explicitly asks you to remember something, save it, unless it is a secret or credential. Choose the scope deliberately: global is about the user and reaches every project, so put a project's conventions in project scope. Save in the moment, without asking first, when the user corrects how you work or states a preference, confirms that a non-obvious approach worked, or when you learn a project fact that took real effort to find. One fact per entry. The user can review and remove what you save, so save when it fits and mention it briefly. Save before you write your final reply and mention the save in it: the app shows only the text after a turn's last tool call as the reply and folds everything earlier into its activity log.";
 
-const KNOWLEDGE_TOOL_DESCRIPTION = "The project's Notes, Todos and Plans: what the user keeps in OpenChamber's Project knowledge panel, shared by every session in the project. Use one action per call; list shows everything at once. Notes are short facts and decisions the user wants at hand; what you learn for yourself belongs in memory. Todos are the user's backlog: add one when the user asks, or when you stop with work left for later, never to track the steps of your current task. Plans are markdown files: list gives each one's path, so read a plan and make small changes to it with your own file tools, and use save to create a plan or replace it whole. Start a plan with a # title line and a short ## Steps checklist of its coarse steps (- [ ] each), then the detail. When you write a plan for the user, save it, show it, and wait: the user reads it, comments on lines, asks for changes, and sends it to a session when it is ready. When you implement a saved plan, tick its step (- [x]) in the file as you finish each one, so the user sees the progress; change nothing else in it unless the user asks, and never drop a constraint from it on your own. Before replacing a note or a plan whole, pass the text you last read as expected: the save then fails instead of overwriting a change made after your read. Scope with projectId or directory, or leave both out for this session's project.";
+const KNOWLEDGE_TOOL_DESCRIPTION = "The project's Notes, Todos and Plans: what the user keeps in OpenChamber's Project knowledge panel, shared by every session in the project. Use one action per call; list shows everything at once. Notes are short facts and decisions the user wants at hand; what you learn for yourself belongs in memory. Todos are the user's backlog: add one when the user asks, or when you stop with work left for later, never to track the steps of your current task. Plans are markdown files: list gives each one's path, so read a plan and make small changes to it with your own file tools, and use save to create a plan or replace it whole. Start a plan with a # title line and a short ## Steps checklist of its coarse steps (- [ ] each), then the detail. When you write a plan for the user, save it, show it, and wait: the user reads it, comments on lines, asks for changes, and sends it to a session when it is ready. When you implement a saved plan, tick its step (- [x]) in the file as you finish each one, so the user sees the progress; change nothing else in it unless the user asks, and never drop a constraint from it on your own. Before replacing a note or a plan whole, pass the text you last read as expected: the save then fails instead of overwriting a change made after your read. If the save fails that way, refresh first: list gives a note's current body and a plan's path to read again, then retry the save with the same id and the fresh text as expected. Scope with projectId or directory, or leave both out for this session's project.";
 
 const NOTIFY_TOOL_DESCRIPTION = "Send the user a notification through OpenChamber, so they learn about something without watching the session. Use it when you finish work that took long enough for the user to step away, when you are blocked on something only the user can resolve, or when the user asked to be told about something. Do not use it for routine progress, for every finished step, or to repeat what your reply already says to a user who is present. Keep the title short and put detail in the body.";
 
@@ -320,6 +320,28 @@ const ANSWER_CLOSED_IN_CHAT = String.raw`
           }`;
 
 /**
+ * The generated adapter normalizes exactly the two spellings a stringified
+ * boolean takes, for the fields the tool's own parameter schema declares
+ * boolean. The type comes from the schema the model is given, never from a
+ * list maintained here. A tool with no boolean input gets no block at all.
+ */
+const booleanNormalizationBlock = (parameters) => {
+  const booleanParameters = Object.entries(parameters)
+    .filter(([, schema]) => schema.type === 'boolean')
+    .map(([parameter]) => parameter);
+  if (booleanParameters.length === 0) return '';
+  return String.raw`        // A harness can stringify a boolean on the way here, and every
+        // downstream === true would read "true" as false. Exactly the two
+        // spellings are normalized, for the fields this tool declares boolean;
+        // every other value keeps its identity for the server's strict check.
+        for (const field of ${JSON.stringify(booleanParameters)}) {
+          if (args[field] === "true") args[field] = true
+          else if (args[field] === "false") args[field] = false
+        }
+`;
+};
+
+/**
  * One template, one entry per enabled capability.
  *
  * Both tools speak to the same callback with the same envelope; only the action
@@ -337,7 +359,9 @@ const ANSWER_CLOSED_IN_CHAT = String.raw`
  * answer with an empty completion instead of an error, and the `oneOf` branches
  * are what carry the per-action descriptions the model reads.
  */
-const createToolEntry = ({ name, description, definitions, parameters, codeMode, answers = false }) => String.raw`    tools.add({
+const createToolEntry = ({ name, description, definitions, parameters, codeMode, answers = false }) => {
+  const normalizeBooleans = booleanNormalizationBlock(parameters);
+  return String.raw`    tools.add({
       name: ${JSON.stringify(name)},
       description: ${JSON.stringify(description)},
       // OpenCode 2 puts a plugin tool behind its Code Mode execute tool
@@ -363,7 +387,18 @@ const createToolEntry = ({ name, description, definitions, parameters, codeMode,
         // shapes are accepted; an explicit parameters object wins on a conflict.
         const { action: requestedAction, parameters, ...flattened } = input ?? {}
         const args = { ...flattened, ...(parameters ?? {}), action: requestedAction }
-        const actionTitles = ${JSON.stringify(AGENT_TOOL_ACTION_TITLES)}
+        // Nested object values can arrive JSON-stringified (issue #4591). Only
+        // 'link' is revived, once, and only into a plain object: free-form
+        // strings such as prompts and titles must stay text. The field belongs
+        // to session.link alone (its bare 'link' alias included), so this is
+        // field-scoped rather than a general coercion.
+        if (typeof args.link === 'string') {
+          try {
+            const revived = JSON.parse(args.link)
+            if (revived !== null && typeof revived === 'object' && !Array.isArray(revived)) args.link = revived
+          } catch {}
+        }
+${normalizeBooleans}        const actionTitles = ${JSON.stringify(AGENT_TOOL_ACTION_TITLES)}
         const title = Object.hasOwn(actionTitles, args.action) ? actionTitles[args.action] : args.action
         const progress = (extra) => context.progress({
           ${name}: {
@@ -414,6 +449,7 @@ ${answers ? ANSWER_WAIT_SETUP : ''}
       },
     })
 `;
+};
 
 const createPluginSource = ({ includeControl, includeWeb, includeMemory, includeKnowledge, includeNotify, includeRender, codeMode }) => {
   const entries = [];
@@ -524,13 +560,15 @@ export const createAgentToolRuntime = (dependencies) => {
     crypto,
     fsPromises,
     path,
-    dataDir,
+    instanceDir,
     getActivePort,
     getActiveHost = () => null,
     executeAction,
     resolveSessionDirectory,
   } = dependencies;
-  const pluginRoot = path.join(dataDir, 'agent-tool');
+  // The plugin embeds this server's tool declarations, so it lives in this
+  // server's own directory (see ../opencode/instance-dir.js).
+  const pluginRoot = path.join(instanceDir, 'agent-tool');
   const pluginDirectory = path.join(pluginRoot, PLUGIN_ID);
   const pluginPath = path.join(pluginDirectory, 'index.js');
   const pluginManifestPath = path.join(pluginDirectory, 'package.json');

@@ -45,6 +45,7 @@ import { touchStreamingSession, updateChangedStreamingSessions, updateStreamingS
 import { countSyncPerformance } from "./performance-diagnostics"
 import { runBackgroundNetworkTask } from "@/lib/background-network"
 import { recordDirectoryRecoveryEvent } from "./directory-recovery-snapshots"
+import { hasPromptInFlight, withPromptsInFlight } from "./prompts-in-flight"
 import { adoptSessionMove, setActionRefs } from "./session-actions"
 import { setSyncRefs, getAllSyncSessions, emitSyncConfigChanged, getDirectoryState } from "./sync-refs"
 import { useSessionUIStore } from "./session-ui-store"
@@ -809,8 +810,9 @@ export function applySessionStatusSnapshot(
       }
 
       // Snapshot reports this candidate idle (absent, or explicit idle).
-      // Monotonic never lowers; authoritative trusts the snapshot as truth.
-      if (mode === "monotonic") continue
+      // Monotonic never lowers; authoritative trusts the snapshot as truth,
+      // except for a session whose prompt OpenCode has not admitted yet.
+      if (mode === "monotonic" || hasPromptInFlight(sessionId)) continue
 
       const existing = current[sessionId]
       // Keep the successful snapshot distinguishable from "status has never
@@ -850,7 +852,12 @@ async function resyncDirectorySessionStatuses(
   applySessionStatusSnapshot(store, nextStatuses, eligibleIds, mode)
   if (mode === "authoritative") {
     store.setState({ sessionStatusReady: true })
-    applyGlobalSessionStatusSnapshot(directory, nextStatuses, getDirectoryOwnedSessionIds(directory, store.getState().session))
+    const state = store.getState()
+    applyGlobalSessionStatusSnapshot(
+      directory,
+      withPromptsInFlight(nextStatuses, state.session_status),
+      getDirectoryOwnedSessionIds(directory, state.session),
+    )
   }
   return nextStatuses
 }
@@ -915,7 +922,8 @@ export function maybePollStatusAfterMessageCompletion(
 // After a monotonic poll, decide whether to escalate to a full authoritative
 // resync: the store believes the session is active but the snapshot reports it
 // idle/absent — a suspected missed idle that the monotonic poll deliberately
-// won't lower on its own. The authoritative resync is the recovery path.
+// won't lower on its own. The authoritative resync is the recovery path. A
+// session whose prompt is still being sent is busy without being listed yet.
 export function needsSnapshotAfterStatusPoll(
   state: DirectoryStore,
   sessionId: string,
@@ -923,6 +931,7 @@ export function needsSnapshotAfterStatusPoll(
 ): boolean {
   const incoming = toSessionStatus(snapshotEntry)
   if (incoming && incoming.type !== "idle") return false
+  if (hasPromptInFlight(sessionId)) return false
   const currentStatus = state.session_status?.[sessionId]
   return Boolean(currentStatus && currentStatus.type !== "idle")
 }
@@ -2815,7 +2824,26 @@ export function SyncProvider(props: {
               // arrive together and are split here. Children must be present
               // for pending forms to scope to them right after a restart.
               const { active } = splitGlobalSessionsByArchived(
-                await listGlobalSessionPages(listSessionPage, { directory: dir, pageSize: 500 }),
+                await listGlobalSessionPages(listSessionPage, {
+                  directory: dir,
+                  pageSize: 500,
+                  onPage: (page) => {
+                    if (!isCurrent()) return
+                    const { active } = splitGlobalSessionsByArchived(page)
+                    const current = store.getState()
+                    const { sessions } = mergeBootstrapSessions(
+                      active.filter((session) => !session.parentID), active, current.session, {
+                        baselineRevision,
+                        partial: true,
+                        eventRevision: current.sessionEventRevision,
+                        deletedRevision: current.sessionDeletedRevision,
+                      },
+                    )
+                    if (sessions === current.session) return
+                    store.setState({ session: sessions, limit: Math.max(sessions.length, 50) })
+                    ingestDirectoryStateIntoRoutingIndex(routingIndex, directory, store.getState())
+                  },
+                }),
               )
               const allSessions = active
                 .filter((s) => !!s?.id)

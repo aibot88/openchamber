@@ -21,6 +21,7 @@ import { providersI18n } from './providers.i18n';
 import { mcpGridI18n } from './mcp-grid.i18n';
 import { pluginsGridI18n } from './plugins-grid.i18n';
 import { integrationsCatalogI18n } from './integrations-catalog.i18n';
+import { diffFindI18n } from './diff-find.i18n';
 
 export const dict = {
   "opencodeCompatibility.bundled": "OpenCode is inbegrepen bij OpenChamber. Werk OpenChamber bij om OpenCode v2 te krijgen.",
@@ -152,6 +153,7 @@ export const dict = {
   ...mcpGridI18n.nl,
   ...pluginsGridI18n.nl,
   ...integrationsCatalogI18n['nl'],
+  ...diffFindI18n['nl'],
   'terminalView.actions.attachSelection': 'Geselecteerde uitvoer toevoegen',
   'terminalView.actions.copySelection': 'Geselecteerde uitvoer kopiëren',
   'terminalView.toast.selectionCopied': 'Uitvoer gekopieerd',
@@ -2299,6 +2301,9 @@ export const dict = {
   'session.newWorktree.toast.worktreeCreatedDescription': '{target} - wordt op de achtergrond opgezet',
   'session.newWorktree.toast.fetchSourceFailed': 'Kon niet van de remote ophalen — gemaakt vanuit de lokale status',
   'session.newWorktree.toast.fetchSourceAccess': 'Ophalen mislukt: de toegang tot deze repository vraagt aandacht in Repository configureren. Gemaakt vanuit de lokale status.',
+  'session.newWorktree.toast.startFolderMissing': 'Deze worktree heeft geen map "{folder}", dus OpenCode is gestart in de hoofdmap van de worktree.',
+  'session.newWorktree.toast.startFolderUnverified': 'De map "{folder}" kon niet worden gecontroleerd, dus OpenCode is gestart in de hoofdmap van de worktree.',
+  'session.newWorktree.toast.startFolderUnknown': 'Het is niet gelukt vast te stellen welke map van de repository dit project opent, dus OpenCode is gestart in de hoofdmap van de worktree.',
   'session.newWorktree.toast.branchBackup': '{branch} komt nu overeen met de remote. De vorige commits staan in {backup}.',
   'session.githubIntegration.tabs.pullRequests': 'Pull requests',
   'session.githubIntegration.validation.branchAlreadyCheckedOut': 'Branch is al uitgecheckt in een worktree',
@@ -2432,6 +2437,7 @@ export const dict = {
   'chat.queuedMessage.edit': 'bewerken',
   'chat.queuedMessage.send': 'verzenden',
   'chat.queuedMessage.removeAria': 'Uit de wachtrij verwijderen',
+  'chat.queuedMessage.goal': 'Start een goal bij verzenden',
   'chat.queuedMessage.reorderAria': 'Sleep om te herschikken',
   'chat.queuedMessage.toast.queueFailed': 'Kan het bericht niet in de wachtrij plaatsen. Het staat weer in het invoerveld.',
   'chat.queuedMessage.toast.takeFailed': 'Kan het bericht uit de wachtrij niet laden. Probeer het opnieuw.',
@@ -2752,6 +2758,7 @@ export const dict = {
   'chat.modelControls.clearSearch': 'Zoekopdracht wissen',
   'chat.modelControls.current': 'Huidig',
   'chat.modelControls.thinking': 'Denken',
+  'chat.modelControls.inheritedVariantTooltip': 'Denken: {variant}, standaard voor dit model',
   'chat.modelControls.default': 'Standaard',
   'chat.modelControls.selectAgent': 'Agent kiezen',
   'chat.modelControls.costPerMillion': 'Kosten ($/1M tokens)',

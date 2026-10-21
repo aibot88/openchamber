@@ -30,7 +30,7 @@ const createHarness = async ({ settings = {}, env = {}, memoryAvailable = true }
   const runtime = createManagedConfigRuntime({
     fsPromises: fs,
     path,
-    dataDir,
+    instanceDir: dataDir,
     env,
     agentToolRuntime,
     readSettings: () => current.settings,

@@ -22,6 +22,7 @@ import { providersI18n } from './providers.i18n';
 import { mcpGridI18n } from './mcp-grid.i18n';
 import { pluginsGridI18n } from './plugins-grid.i18n';
 import { integrationsCatalogI18n } from './integrations-catalog.i18n';
+import { diffFindI18n } from './diff-find.i18n';
 
 export const dict: Record<I18nKey, string> = {
   "opencodeCompatibility.bundled": "OpenCode 随 OpenChamber 一起提供。请更新 OpenChamber 以获取 OpenCode v2。",
@@ -153,6 +154,7 @@ export const dict: Record<I18nKey, string> = {
   ...mcpGridI18n['zh-CN'],
   ...pluginsGridI18n['zh-CN'],
   ...integrationsCatalogI18n['zh-CN'],
+  ...diffFindI18n['zh-CN'],
   'terminalView.actions.attachSelection': '附加所选输出',
   'terminalView.actions.copySelection': '复制所选输出',
   'terminalView.toast.selectionCopied': '已复制输出',
@@ -2265,6 +2267,9 @@ export const dict: Record<I18nKey, string> = {
   'session.newWorktree.toast.worktreeCreatedDescription': '{target} - 正在后台初始化',
   'session.newWorktree.toast.fetchSourceFailed': '无法从远程获取 — 已基于本地状态创建',
   'session.newWorktree.toast.fetchSourceAccess': '无法获取：需要在“配置仓库”中处理此仓库的访问权限。已基于本地状态创建。',
+  'session.newWorktree.toast.startFolderMissing': '此 worktree 中没有“{folder}”文件夹，因此 OpenCode 在 worktree 根目录启动。',
+  'session.newWorktree.toast.startFolderUnverified': '无法检查“{folder}”文件夹，因此 OpenCode 在 worktree 根目录启动。',
+  'session.newWorktree.toast.startFolderUnknown': '无法确定此项目打开的是仓库中的哪个文件夹，因此 OpenCode 在 worktree 根目录启动。',
   'session.newWorktree.toast.branchBackup': '{branch} 现在与远程一致。之前的提交保留在 {backup} 中。',
   'session.githubIntegration.tabs.pullRequests': '拉取请求',
   'session.githubIntegration.validation.branchAlreadyCheckedOut': '该分支已在某个工作树中检出',
@@ -2398,6 +2403,7 @@ export const dict: Record<I18nKey, string> = {
   'chat.queuedMessage.edit': '编辑',
   'chat.queuedMessage.send': '发送',
   'chat.queuedMessage.removeAria': '从队列移除',
+  'chat.queuedMessage.goal': '发送时启动目标',
   'chat.queuedMessage.reorderAria': '拖动以重新排序',
   'chat.queuedMessage.toast.queueFailed': '无法将消息加入队列，已放回输入框。',
   'chat.queuedMessage.toast.takeFailed': '无法加载队列中的消息，请重试。',
@@ -2718,6 +2724,7 @@ export const dict: Record<I18nKey, string> = {
   'chat.modelControls.clearSearch': '清除搜索',
   'chat.modelControls.current': '当前',
   'chat.modelControls.thinking': '思考',
+  'chat.modelControls.inheritedVariantTooltip': '思考：{variant}，此模型的默认值',
   'chat.modelControls.default': '默认',
   'chat.modelControls.selectAgent': '选择智能体',
   'chat.modelControls.costPerMillion': '成本（$/100万 tokens）',
